@@ -2,6 +2,7 @@
 
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const crypto = require("crypto");
 const { Pool } = require("pg");
 
@@ -67,7 +68,20 @@ async function migrate() {
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+
+// Serve the frontend regardless of whether index.html ended up in /public
+// (correct layout) or at the repo root (can happen with GitHub's web upload).
+const publicDir = path.join(__dirname, "public");
+const publicIndexPath = path.join(publicDir, "index.html");
+const rootIndexPath = path.join(__dirname, "index.html");
+
+if (fs.existsSync(publicDir)) app.use(express.static(publicDir));
+
+app.get("/", (req, res) => {
+  if (fs.existsSync(publicIndexPath)) return res.sendFile(publicIndexPath);
+  if (fs.existsSync(rootIndexPath)) return res.sendFile(rootIndexPath);
+  res.status(404).send("No se encontró index.html. Verifica que el archivo esté en el repositorio.");
+});
 
 function uid(prefix) {
   return prefix + "_" + crypto.randomUUID().replace(/-/g, "").slice(0, 20);
