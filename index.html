@@ -2,7 +2,7 @@
 <html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Control de Flotilla — Conductores y Gasolina</title>
 <style>
   :root, .viz-root {
@@ -39,107 +39,105 @@
     --status-warning: #fab219;
     --status-critical:#e66767;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
   body {
     margin: 0;
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     background: var(--page);
     color: var(--text-primary);
+    font-size: 15px;
   }
   a { color: inherit; }
-  .app { display: flex; min-height: 100vh; }
+  button { -webkit-appearance: none; appearance: none; }
 
-  /* Sidebar */
-  .sidebar {
-    width: 232px;
-    flex-shrink: 0;
+  /* ---------- App shell: mobile-first, centered on wider screens ---------- */
+  .page-wrap { min-height: 100%; display: flex; justify-content: center; background: var(--page); }
+  .app-shell {
+    width: 100%; max-width: 480px; min-height: 100vh;
     background: var(--surface-1);
-    border-right: 1px solid var(--border);
-    padding: 20px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: flex; flex-direction: column;
+    position: relative;
   }
-  .brand {
-    padding: 4px 10px 18px 10px;
-    font-weight: 600;
-    font-size: 15px;
-    line-height: 1.3;
+  @media (min-width: 481px) {
+    .app-shell { box-shadow: 0 0 0 1px var(--border), 0 12px 50px rgba(0,0,0,.10); }
+    body { background: var(--page); }
   }
-  .brand small { display:block; font-weight: 400; color: var(--text-muted); font-size: 12px; margin-top:2px;}
-  .navbtn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 10px;
-    border-radius: 8px;
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 14px;
-    text-align: left;
-    cursor: pointer;
-  }
-  .navbtn:hover { background: var(--surface-2); }
-  .navbtn.active { background: var(--series-1-soft); color: var(--text-primary); font-weight: 600; }
-  .sidebar-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); display:flex; flex-direction:column; gap:6px;}
-  .save-status { font-size: 11px; color: var(--text-muted); line-height: 1.4; padding: 0 2px 4px 2px; }
-  .save-status strong { color: var(--text-primary); }
-  .actor-field { padding: 0 2px 6px 2px; }
-  .actor-field label { font-size: 11px; color: var(--text-secondary); display:block; margin-bottom:3px; }
-  .actor-field input { width:100%; font-size:12px; padding:6px 8px; border-radius:8px; border:1px solid var(--border); background: var(--surface-2); color: var(--text-primary); font-family: inherit; }
 
-  /* Main */
-  .main { flex: 1; min-width: 0; padding: 22px 28px 60px 28px; }
-  .topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom: 18px; flex-wrap: wrap;}
-  .topbar h1 { font-size: 20px; margin: 0; }
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--surface-1); border-bottom: 1px solid var(--border);
+    padding: max(env(safe-area-inset-top), 12px) 14px 12px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .topbar h1 { font-size: 17px; margin: 0; font-weight: 700; }
+  .icon-btn {
+    width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface-2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; color: var(--text-secondary); cursor: pointer;
+  }
+  .icon-btn:active { background: var(--series-1-soft); }
+
+  .main { flex: 1; padding: 14px 14px calc(80px + env(safe-area-inset-bottom)) 14px; }
 
   section.tab { display:none; }
   section.tab.active { display:block; }
+
+  /* ---------- Bottom tab bar ---------- */
+  .bottom-nav {
+    position: sticky; bottom: 0; z-index: 20;
+    background: var(--surface-1); border-top: 1px solid var(--border);
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .bottom-nav button {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 9px 2px 8px 2px; border: none; background: transparent;
+    color: var(--text-muted); font-family: inherit; font-size: 10.5px; font-weight: 600;
+    cursor: pointer; min-height: 56px;
+  }
+  .bottom-nav button .ic { font-size: 21px; line-height: 1; }
+  .bottom-nav button.active { color: var(--series-1); }
 
   .card {
     background: var(--surface-1);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 18px;
+    padding: 16px;
   }
-  .grid { display:grid; gap: 14px; }
-  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 18px; }
-  .stat-tile { padding: 16px; }
-  .stat-tile .label { font-size: 12px; color: var(--text-muted); }
-  .stat-tile .value { font-size: 26px; font-weight: 600; margin-top: 4px; }
-  .stat-tile .sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .grid { display:grid; gap: 10px; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); margin-bottom: 14px; }
+  .stat-tile { padding: 14px; }
+  .stat-tile .label { font-size: 11.5px; color: var(--text-muted); }
+  .stat-tile .value { font-size: 21px; font-weight: 700; margin-top: 4px; line-height: 1.2; }
+  .stat-tile .sub { font-size: 11.5px; color: var(--text-secondary); margin-top: 4px; }
 
-  h2.section-title { font-size: 16px; margin: 26px 0 10px 0; }
+  h2.section-title { font-size: 15px; margin: 20px 0 10px 0; font-weight: 700; }
   h2.section-title:first-child { margin-top: 0; }
-
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--grid); }
-  th { color: var(--text-muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .02em;}
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  tr:last-child td { border-bottom: none; }
 
   .btn {
     font-family: inherit;
-    font-size: 13px;
-    padding: 8px 14px;
-    border-radius: 8px;
+    font-size: 14px;
+    padding: 11px 16px;
+    border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--surface-2);
     color: var(--text-primary);
     cursor: pointer;
+    min-height: 44px;
   }
-  .btn:hover { border-color: var(--series-1); }
-  .btn.primary { background: var(--series-1); color: #fff; border-color: var(--series-1); }
-  .btn.primary:hover { opacity: .92; }
-  .btn.small { padding: 4px 9px; font-size: 12px; }
+  .btn.primary { background: var(--series-1); color: #fff; border-color: var(--series-1); font-weight: 600; }
+  .btn.primary:active { opacity: .88; }
+  .btn.small { padding: 8px 12px; font-size: 13px; min-height: 38px; }
+  .btn.block { width: 100%; }
   .btn.ghost { background: transparent; }
   .btn.danger { color: var(--status-critical); }
   .btn:disabled { opacity: .5; cursor: default; }
 
   .tag {
     display:inline-flex; align-items:center; gap:4px;
-    font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; padding: 3px 8px; border-radius: 999px;
     border: 1px solid var(--border); color: var(--text-secondary);
   }
   .tag.own { background: var(--surface-2); }
@@ -147,126 +145,136 @@
   .tag.badge-max { border-color: var(--status-critical); color: var(--status-critical); }
   .tag.badge-min { border-color: var(--status-good); color: var(--status-good); }
 
-  .field { display:flex; flex-direction:column; gap:4px; margin-bottom: 12px; }
-  .field label { font-size: 12px; color: var(--text-secondary); }
+  .field { display:flex; flex-direction:column; gap:5px; margin-bottom: 14px; }
+  .field label { font-size: 12.5px; color: var(--text-secondary); }
   .field input, .field select, .field textarea {
-    font-family: inherit; font-size: 14px; padding: 8px 10px;
-    border-radius: 8px; border: 1px solid var(--border);
+    font-family: inherit; font-size: 16px; padding: 12px 12px;
+    border-radius: 10px; border: 1px solid var(--border);
     background: var(--surface-2); color: var(--text-primary);
+    min-height: 46px;
   }
   .field-row { display:flex; gap: 10px; }
   .field-row .field { flex: 1; }
 
-  .empty { color: var(--text-muted); font-size: 13px; padding: 22px 0; text-align:center; }
-  .form-error { color: var(--status-critical); font-size: 12px; margin: -6px 0 10px 0; }
+  .empty { color: var(--text-muted); font-size: 13.5px; padding: 24px 10px; text-align:center; line-height:1.5; }
+  .form-error { color: var(--status-critical); font-size: 13px; margin: -8px 0 12px 0; }
 
-  .driver-list { display:flex; flex-direction:column; gap:8px; }
+  .driver-list { display:flex; flex-direction:column; gap:10px; }
   .driver-item {
     display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; border: 1px solid var(--border); border-radius: 12px;
     background: var(--surface-2); cursor:pointer;
   }
-  .driver-item:hover { border-color: var(--series-1); }
-  .driver-item .name { font-weight: 600; font-size: 14px; }
-  .driver-item .meta { font-size: 12px; color: var(--text-muted); margin-top:2px;}
-  .driver-item .right { display:flex; align-items:center; gap:8px; }
+  .driver-item:active { border-color: var(--series-1); }
+  .driver-item .name { font-weight: 700; font-size: 14.5px; }
+  .driver-item .meta { font-size: 12px; color: var(--text-muted); margin-top:3px; line-height:1.4; }
+  .driver-item .right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
 
-  /* Modal */
+  /* ---------- Modal: bottom sheet ---------- */
   .overlay {
-    display:none; position: fixed; inset:0; background: rgba(0,0,0,.45);
-    align-items: center; justify-content: center; z-index: 50; padding: 20px;
+    display:none; position: fixed; inset:0; background: rgba(0,0,0,.5);
+    align-items: flex-end; justify-content: center; z-index: 50;
   }
   .overlay.show { display:flex; }
   .modal {
-    background: var(--surface-1); border-radius: 14px; border: 1px solid var(--border);
-    width: 100%; max-width: 480px; max-height: 90vh; overflow-y:auto; padding: 22px;
+    background: var(--surface-1); border-radius: 18px 18px 0 0; border: 1px solid var(--border); border-bottom: none;
+    width: 100%; max-width: 480px; max-height: 88vh; overflow-y:auto;
+    padding: 10px 18px calc(18px + env(safe-area-inset-bottom)) 18px;
   }
-  .modal h3 { margin-top:0; font-size: 16px; }
-  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top: 16px; }
+  .modal .sheet-handle { width: 36px; height: 4px; border-radius: 999px; background: var(--grid); margin: 0 auto 14px auto; }
+  .modal h3 { margin-top:2px; font-size: 16px; }
+  .modal-actions { display:flex; flex-direction: column-reverse; gap:8px; margin-top: 18px; }
+  .modal-actions .btn { width: 100%; }
 
-  /* Bar chart (horizontal) */
-  .barchart-row { display:flex; align-items:center; gap:10px; margin-bottom: 10px; }
-  .barchart-row .bc-label { width: 150px; flex-shrink:0; font-size:13px; color: var(--text-secondary); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .barchart-row .bc-track { flex:1; background: var(--surface-2); border-radius: 4px; height: 18px; position:relative; border: 1px solid var(--grid); }
+  /* ---------- Bar chart (horizontal) ---------- */
+  .barchart-row { display:flex; align-items:center; gap:8px; margin-bottom: 10px; }
+  .barchart-row .bc-label { width: 84px; flex-shrink:0; font-size:12px; color: var(--text-secondary); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .barchart-row .bc-track { flex:1; background: var(--surface-2); border-radius: 4px; height: 16px; position:relative; border: 1px solid var(--grid); }
   .barchart-row .bc-fill { position:absolute; left:0; top:0; bottom:0; background: var(--series-1); border-radius: 4px; min-width: 2px; }
-  .barchart-row .bc-value { width: 92px; flex-shrink:0; font-size: 12px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .barchart-row .bc-value { width: 78px; flex-shrink:0; font-size: 11.5px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .barchart-row .bc-value .tag { display:block; margin-top:2px; width:fit-content; }
 
   .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom: 14px; }
-  .toolbar select, .toolbar input { font-family: inherit; font-size: 13px; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); }
+  .toolbar select, .toolbar input { font-family: inherit; font-size: 14px; padding: 10px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); min-height: 42px; }
+  .toolbar select { flex: 1; }
 
-  .preset-btns { display:flex; gap:6px; }
+  .preset-btns { display:flex; gap:6px; width:100%; }
+  .preset-btns .btn { flex:1; padding: 9px 6px; font-size: 12.5px; }
   .preset-btns .btn.active { background: var(--series-1-soft); border-color: var(--series-1); }
+  .range-row { display:flex; gap:8px; align-items:center; width:100%; }
+  .range-row input { flex:1; }
 
   .rest-chip-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-  .rest-chip { display:flex; align-items:center; gap:6px; font-size:12px; background: var(--surface-2); border:1px solid var(--border); border-radius:999px; padding:3px 6px 3px 10px; }
-  .rest-chip button { border:none; background:transparent; cursor:pointer; color: var(--text-muted); font-size:14px; line-height:1; padding:2px;}
+  .rest-chip { display:flex; align-items:center; gap:6px; font-size:12px; background: var(--surface-2); border:1px solid var(--border); border-radius:999px; padding:5px 6px 5px 10px; }
+  .rest-chip button { border:none; background:transparent; cursor:pointer; color: var(--text-muted); font-size:15px; line-height:1; padding:3px; }
 
-  /* Charge driver grid (landing screen) */
-  .charge-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin-bottom: 30px; }
+  /* ---------- Charge driver grid (landing screen) ---------- */
+  .charge-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 26px; }
   .charge-card {
     position: relative; background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px; cursor: pointer; transition: border-color .15s, transform .1s;
+    border-radius: 14px; padding: 12px; cursor: pointer;
   }
-  .charge-card:hover { border-color: var(--series-1); }
-  .charge-card:active { transform: scale(0.98); }
+  .charge-card:active { border-color: var(--series-1); background: var(--series-1-soft); }
   .charge-card .thumb {
     aspect-ratio: 1 / 1; background: var(--surface-1); border: 1px solid var(--grid);
-    border-radius: 8px; display:flex; align-items:center; justify-content:center;
-    font-size: 34px; margin-bottom: 10px;
+    border-radius: 10px; display:flex; align-items:center; justify-content:center;
+    font-size: 32px; margin-bottom: 10px;
   }
-  .charge-card .ctitle { font-size: 13px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+  .charge-card .ctitle { font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
   .charge-card .cmeta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
   .charge-card .info-btn {
-    position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%;
+    position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%;
     background: var(--surface-1); border: 1px solid var(--border); display:flex; align-items:center;
     justify-content:center; font-size: 12px; color: var(--text-muted); cursor: pointer;
   }
-  .charge-card .info-btn:hover { color: var(--text-primary); border-color: var(--series-1); }
   .charge-grid-empty { grid-column: 1 / -1; }
 
-  .diff-old { color: var(--status-critical); text-decoration: line-through; opacity:.8;}
+  /* ---------- Entry cards (charges, history) ---------- */
+  .entry-list { display:flex; flex-direction:column; gap:10px; }
+  .entry-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 13px 14px; }
+  .entry-card .row1 { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .entry-card .title { font-weight: 700; font-size: 14px; }
+  .entry-card .amount { font-weight: 700; font-size: 16.5px; font-variant-numeric: tabular-nums; white-space:nowrap; }
+  .entry-card .meta { font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+  .entry-card .meta .note { color: var(--text-muted); }
+  .entry-card .actions { display:flex; gap:8px; margin-top: 12px; }
+  .entry-card .actions .btn { flex:1; }
+  .entry-card .diffline { font-size: 12.5px; margin-top: 3px; }
+
+  .diff-old { color: var(--status-critical); text-decoration: line-through; opacity:.85; }
   .diff-new { color: var(--status-good); font-weight:600; }
 
-  footer.foot { margin-top: 30px; font-size: 12px; color: var(--text-muted); }
+  /* ---------- Report driver cards ---------- */
+  .report-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 13px 14px; }
+  .report-card .row1 { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom: 10px; }
+  .report-card .title { font-weight: 700; font-size: 14.5px; }
+  .report-card .mini-stats { display:grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .report-card .mini-stat .label { font-size: 11px; color: var(--text-muted); }
+  .report-card .mini-stat .value { font-size: 14.5px; font-weight: 700; margin-top:2px; font-variant-numeric: tabular-nums; }
+  .report-card .mini-stat .sub { font-size: 10.5px; color: var(--text-muted); }
 
-  @media (max-width: 760px) {
-    .app { flex-direction: column; }
-    .sidebar { width: 100%; flex-direction: row; overflow-x: auto; align-items: center; }
-    .sidebar-foot { display:none; }
-    .barchart-row .bc-label { width: 90px; }
-  }
+  footer.foot { margin-top: 26px; font-size: 11.5px; color: var(--text-muted); line-height: 1.5; padding-bottom: 6px; }
+
+  .settings-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 12px 0; border-bottom: 1px solid var(--grid); }
+  .settings-row:last-of-type { border-bottom: none; }
 </style>
 </head>
 <body>
-<div class="app viz-root">
-  <div class="sidebar">
-    <div class="brand">Control de Flotilla<small>Conductores &amp; gasolina</small></div>
-    <button class="navbtn active" data-tab="charges">⛽ Cargas de gasolina</button>
-    <button class="navbtn" data-tab="drivers">🧑‍✈️ Conductores</button>
-    <button class="navbtn" data-tab="history">🕘 Historial de cambios</button>
-    <button class="navbtn" data-tab="reports">📈 Reportes y promedios</button>
-    <button class="navbtn" data-tab="dashboard">📊 Dashboard</button>
-    <div class="sidebar-foot">
-      <div class="actor-field">
-        <label for="actorName">Tu nombre (para el historial)</label>
-        <input type="text" id="actorName" placeholder="Ej. Cristhian">
-      </div>
-      <div id="saveStatus" class="save-status">🟡 Conectando…</div>
-      <button class="btn small ghost" id="exportBtnSide">⬇ Exportar copia</button>
-      <button class="btn small ghost" id="themeToggle">🌓 Cambiar tema</button>
-    </div>
+<div class="page-wrap">
+<div class="app-shell viz-root">
+
+  <div class="topbar">
+    <h1 id="pageTitle">Cargas de gasolina</h1>
+    <button class="icon-btn" id="settingsBtn" title="Ajustes">⚙️</button>
   </div>
 
   <div class="main">
-    <div class="topbar">
-      <h1 id="pageTitle">Cargas de gasolina</h1>
-    </div>
 
     <!-- DASHBOARD -->
     <section class="tab" id="tab-dashboard">
       <div class="grid stat-grid" id="dashStats"></div>
       <div class="card">
-        <h2 class="section-title" style="margin-top:0;">Consumo promedio por día — este mes (autos de la empresa)</h2>
+        <h2 class="section-title" style="margin-top:0;">Consumo promedio por día — este mes</h2>
         <div id="dashChart"></div>
       </div>
     </section>
@@ -274,7 +282,7 @@
     <!-- DRIVERS -->
     <section class="tab" id="tab-drivers">
       <div class="toolbar">
-        <button class="btn primary" id="addDriverBtn">+ Nuevo conductor</button>
+        <button class="btn primary block" id="addDriverBtn">+ Nuevo conductor</button>
       </div>
       <div class="driver-list" id="driverList"></div>
     </section>
@@ -285,70 +293,55 @@
 
       <h2 class="section-title">Historial de cargas</h2>
       <div class="toolbar">
-        <button class="btn primary" id="addChargeBtn">+ Registrar carga de gasolina</button>
         <select id="chargeFilterDriver"><option value="">Todos los conductores</option></select>
+        <button class="btn primary" id="addChargeBtn">+ Cargar</button>
       </div>
-      <div class="card">
-        <table>
-          <thead><tr><th>Conductor</th><th>Fecha</th><th>Hora</th><th class="num">Monto</th><th>Nota</th><th></th></tr></thead>
-          <tbody id="chargeTableBody"></tbody>
-        </table>
-        <div class="empty" id="chargeEmpty" style="display:none;">Aún no hay cargas de gasolina registradas.</div>
-      </div>
+      <div class="entry-list" id="chargeList"></div>
+      <div class="empty" id="chargeEmpty" style="display:none;">Aún no hay cargas de gasolina registradas.</div>
     </section>
 
     <!-- HISTORY -->
     <section class="tab" id="tab-history">
-      <div class="card">
-        <table>
-          <thead><tr><th>Editado el</th><th>Editado por</th><th>Conductor</th><th class="num">Monto antes</th><th class="num">Monto después</th><th>Fecha/hora antes</th><th>Fecha/hora después</th></tr></thead>
-          <tbody id="historyTableBody"></tbody>
-        </table>
-        <div class="empty" id="historyEmpty" style="display:none;">Todavía no se ha editado ninguna carga de gasolina.</div>
-      </div>
+      <div class="entry-list" id="historyList"></div>
+      <div class="empty" id="historyEmpty" style="display:none;">Todavía no se ha editado ninguna carga de gasolina.</div>
     </section>
 
     <!-- REPORTS -->
     <section class="tab" id="tab-reports">
-      <div class="toolbar">
+      <div class="toolbar" style="flex-direction:column; align-items:stretch;">
         <div class="preset-btns" id="presetBtns">
-          <button class="btn small" data-preset="week">Esta semana</button>
-          <button class="btn small active" data-preset="month">Este mes</button>
-          <button class="btn small" data-preset="all">Todo el tiempo</button>
+          <button class="btn small" data-preset="week">Semana</button>
+          <button class="btn small active" data-preset="month">Mes</button>
+          <button class="btn small" data-preset="all">Todo</button>
         </div>
-        <input type="date" id="rangeStart">
-        <span style="color:var(--text-muted); font-size:13px;">a</span>
-        <input type="date" id="rangeEnd">
+        <div class="range-row">
+          <input type="date" id="rangeStart">
+          <span style="color:var(--text-muted); font-size:12px;">a</span>
+          <input type="date" id="rangeEnd">
+        </div>
       </div>
 
-      <div class="card" style="margin-bottom:16px;">
+      <div class="card" style="margin-bottom:14px;">
         <h2 class="section-title" style="margin-top:0;">Promedio diario por conductor</h2>
         <div id="reportChart"></div>
       </div>
 
-      <div class="card">
-        <h2 class="section-title" style="margin-top:0;">Detalle por conductor</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Conductor</th>
-              <th class="num">Total gastado</th>
-              <th class="num">Días trabajados</th>
-              <th class="num">Prom. diario</th>
-              <th class="num">Semanas</th>
-              <th class="num">Prom. semanal</th>
-              <th class="num">Meses</th>
-              <th class="num">Prom. mensual</th>
-            </tr>
-          </thead>
-          <tbody id="reportTableBody"></tbody>
-        </table>
-        <div class="empty" id="reportEmpty" style="display:none;">No hay conductores con auto de la empresa registrados.</div>
-      </div>
+      <h2 class="section-title">Detalle por conductor</h2>
+      <div class="entry-list" id="reportList"></div>
+      <div class="empty" id="reportEmpty" style="display:none;">No hay conductores con auto de la empresa registrados.</div>
     </section>
 
-    <footer class="foot">Los datos se guardan en una base de datos compartida en la nube — todos los usuarios de este enlace ven la misma información.</footer>
   </div>
+
+  <div class="bottom-nav">
+    <button data-tab="charges" class="active"><span class="ic">⛽</span>Cargas</button>
+    <button data-tab="drivers"><span class="ic">🧑‍✈️</span>Conductores</button>
+    <button data-tab="history"><span class="ic">🕘</span>Historial</button>
+    <button data-tab="reports"><span class="ic">📈</span>Reportes</button>
+    <button data-tab="dashboard"><span class="ic">📊</span>Dashboard</button>
+  </div>
+
+</div>
 </div>
 
 <!-- Modal root -->
@@ -377,14 +370,16 @@
   function driverById(id){ return state.drivers.find(function(d){ return d.id === id; }); }
 
   // ---------- "Who am I" (remembered locally per device, purely a UX convenience) ----------
-  function getActor(){
-    var el = document.getElementById('actorName');
-    return el ? el.value.trim() : '';
+  var actorName = '';
+  function getActor(){ return actorName; }
+  function setActor(v){
+    actorName = (v || '').trim();
+    try { window.localStorage && window.localStorage.setItem('cf_actor_name', actorName); } catch(e){}
   }
   (function restoreActorName(){
     try {
       var saved = window.localStorage && window.localStorage.getItem('cf_actor_name');
-      if(saved) document.getElementById('actorName').value = saved;
+      if(saved) actorName = saved;
     } catch(e){ /* storage unavailable — no big deal, just retype your name */ }
   })();
 
@@ -409,8 +404,10 @@
     });
   }
 
+  var saveState = 'loading';
   function updateSaveStatus(kind){
-    var el = document.getElementById('saveStatus');
+    saveState = kind;
+    var el = document.getElementById('saveStatusText');
     if(!el) return;
     if(kind === 'connected') el.innerHTML = '🟢 Conectado a la base de datos';
     else if(kind === 'saving') el.innerHTML = '🟡 Guardando…';
@@ -521,13 +518,13 @@
   }
 
   function renderNav(){
-    document.querySelectorAll('.navbtn').forEach(function(btn){
+    document.querySelectorAll('.bottom-nav button').forEach(function(btn){
       btn.classList.toggle('active', btn.dataset.tab === state.activeTab);
     });
     document.querySelectorAll('section.tab').forEach(function(sec){
       sec.classList.toggle('active', sec.id === 'tab-' + state.activeTab);
     });
-    var titles = {dashboard:'Dashboard', drivers:'Conductores', charges:'Cargas de gasolina', history:'Historial de cambios', reports:'Reportes y promedios'};
+    var titles = {dashboard:'Dashboard', drivers:'Conductores', charges:'Cargas de gasolina', history:'Historial de cambios', reports:'Reportes'};
     document.getElementById('pageTitle').textContent = titles[state.activeTab] || '';
   }
 
@@ -543,8 +540,8 @@
       row.className = 'barchart-row';
       var pct = max > 0 ? Math.max((r.value / max) * 100, r.value > 0 ? 1.5 : 0) : 0;
       var badge = '';
-      if(r.tagMax) badge = ' <span class="tag badge-max">▲ mayor consumo</span>';
-      else if(r.tagMin) badge = ' <span class="tag badge-min">▼ menor consumo</span>';
+      if(r.tagMax) badge = '<span class="tag badge-max">▲ mayor</span>';
+      else if(r.tagMin) badge = '<span class="tag badge-min">▼ menor</span>';
       row.innerHTML =
         '<div class="bc-label" title="'+escapeHtml(r.label)+'">'+escapeHtml(r.label)+'</div>' +
         '<div class="bc-track"><div class="bc-fill" style="width:'+pct+'%;"></div></div>' +
@@ -564,10 +561,10 @@
     var minEntry = withData.length ? withData.reduce(function(a,b){ return b.stats.dailyAvg < a.stats.dailyAvg ? b : a; }) : null;
 
     var tiles = [
-      {label:'Total de conductores', value: state.drivers.length, sub: ownDrivers.length+' auto propio · '+companyDrivers.length+' auto de empresa'},
-      {label:'Gastado en gasolina este mes', value: fmtMoney(totalMonth), sub: mr.start+' a '+mr.end},
-      {label:'Mayor consumo diario prom.', value: maxEntry ? maxEntry.driver.name : '—', sub: maxEntry ? fmtMoney(maxEntry.stats.dailyAvg)+' / día' : 'Sin datos este mes'},
-      {label:'Menor consumo diario prom.', value: minEntry ? minEntry.driver.name : '—', sub: minEntry ? fmtMoney(minEntry.stats.dailyAvg)+' / día' : 'Sin datos este mes'}
+      {label:'Conductores', value: state.drivers.length, sub: ownDrivers.length+' propio · '+companyDrivers.length+' empresa'},
+      {label:'Gastado este mes', value: fmtMoney(totalMonth), sub: 'Autos de la empresa'},
+      {label:'Mayor consumo', value: maxEntry ? maxEntry.driver.name : '—', sub: maxEntry ? fmtMoney(maxEntry.stats.dailyAvg)+' / día' : 'Sin datos'},
+      {label:'Menor consumo', value: minEntry ? minEntry.driver.name : '—', sub: minEntry ? fmtMoney(minEntry.stats.dailyAvg)+' / día' : 'Sin datos'}
     ];
     var host = document.getElementById('dashStats');
     host.innerHTML = tiles.map(function(t){
@@ -621,7 +618,7 @@
     host.innerHTML = companyDrivers.map(function(d){
       var stats = computeStats(d, mr.start, mr.end);
       var metaText = stats.chargesCount > 0 ? 'Este mes: ' + fmtMoney(stats.total) : 'Sin cargas este mes';
-      return '<div class="charge-card" data-action="open-charge-for-driver" data-id="'+d.id+'" title="Registrar carga de gasolina para '+escapeHtml(d.name)+'">' +
+      return '<div class="charge-card" data-action="open-charge-for-driver" data-id="'+d.id+'">' +
         '<button class="info-btn" data-action="open-driver" data-id="'+d.id+'" title="Ver conductor">i</button>' +
         '<div class="thumb">🚚</div>' +
         '<div class="ctitle">'+escapeHtml(d.name)+'</div>' +
@@ -638,26 +635,26 @@
     var filterId = document.getElementById('chargeFilterDriver').value;
     var list = state.charges.filter(function(c){ return !filterId || c.driverId === filterId; })
       .slice().sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); });
-    var body = document.getElementById('chargeTableBody');
+    var host = document.getElementById('chargeList');
     var empty = document.getElementById('chargeEmpty');
     if(list.length === 0){
-      body.innerHTML = '';
+      host.innerHTML = '';
       empty.style.display = 'block';
       return;
     }
     empty.style.display = 'none';
-    body.innerHTML = list.map(function(c){
+    host.innerHTML = list.map(function(c){
       var d = driverById(c.driverId);
       var edits = editCounts[c.id] || 0;
       var editedTag = edits > 0 ? ' <span class="tag" title="Esta carga fue editada">editada ×'+edits+'</span>' : '';
-      return '<tr>' +
-        '<td>'+escapeHtml(d ? d.name : '(conductor eliminado)')+'</td>' +
-        '<td>'+fmtDate(c.date)+'</td>' +
-        '<td>'+escapeHtml(c.time||'')+'</td>' +
-        '<td class="num">'+fmtMoney(c.amount)+editedTag+'</td>' +
-        '<td>'+escapeHtml(c.note||'')+'</td>' +
-        '<td style="white-space:nowrap;"><button class="btn small" data-action="edit-charge" data-id="'+c.id+'">Editar</button> <button class="btn small danger" data-action="delete-charge" data-id="'+c.id+'">Eliminar</button></td>' +
-        '</tr>';
+      return '<div class="entry-card">' +
+        '<div class="row1"><div class="title">'+escapeHtml(d ? d.name : '(conductor eliminado)')+'</div><div class="amount">'+fmtMoney(c.amount)+'</div></div>' +
+        '<div class="meta">'+fmtDate(c.date)+' · '+escapeHtml(c.time||'')+editedTag+(c.note ? '<br><span class="note">'+escapeHtml(c.note)+'</span>' : '')+'</div>' +
+        '<div class="actions">' +
+          '<button class="btn small" data-action="edit-charge" data-id="'+c.id+'">Editar</button>' +
+          '<button class="btn small danger" data-action="delete-charge" data-id="'+c.id+'">Eliminar</button>' +
+        '</div>' +
+      '</div>';
     }).join('');
   }
 
@@ -669,26 +666,23 @@
         before: h.before, after: h.after
       };
     });
-    var body = document.getElementById('historyTableBody');
+    var host = document.getElementById('historyList');
     var empty = document.getElementById('historyEmpty');
     if(rows.length === 0){
-      body.innerHTML = '';
+      host.innerHTML = '';
       empty.style.display = 'block';
       return;
     }
     empty.style.display = 'none';
-    body.innerHTML = rows.map(function(r){
+    host.innerHTML = rows.map(function(r){
       var amtChanged = Number(r.before.amount) !== Number(r.after.amount);
       var dtChanged = (r.before.date !== r.after.date) || (r.before.time !== r.after.time);
-      return '<tr>' +
-        '<td>'+new Date(r.editedAt).toLocaleString('es-MX')+'</td>' +
-        '<td>'+escapeHtml(r.editedBy || '—')+'</td>' +
-        '<td>'+escapeHtml(r.driverName)+'</td>' +
-        '<td class="num '+(amtChanged?'diff-old':'')+'">'+fmtMoney(r.before.amount)+'</td>' +
-        '<td class="num '+(amtChanged?'diff-new':'')+'">'+fmtMoney(r.after.amount)+'</td>' +
-        '<td class="'+(dtChanged?'diff-old':'')+'">'+fmtDate(r.before.date)+' '+escapeHtml(r.before.time||'')+'</td>' +
-        '<td class="'+(dtChanged?'diff-new':'')+'">'+fmtDate(r.after.date)+' '+escapeHtml(r.after.time||'')+'</td>' +
-        '</tr>';
+      return '<div class="entry-card">' +
+        '<div class="row1"><div class="title">'+escapeHtml(r.driverName)+'</div></div>' +
+        '<div class="meta">'+new Date(r.editedAt).toLocaleString('es-MX')+' · editado por '+escapeHtml(r.editedBy || '—')+'</div>' +
+        (amtChanged ? '<div class="diffline">Monto: <span class="diff-old">'+fmtMoney(r.before.amount)+'</span> → <span class="diff-new">'+fmtMoney(r.after.amount)+'</span></div>' : '') +
+        (dtChanged ? '<div class="diffline">Fecha/hora: <span class="diff-old">'+fmtDate(r.before.date)+' '+escapeHtml(r.before.time||'')+'</span> → <span class="diff-new">'+fmtDate(r.after.date)+' '+escapeHtml(r.after.time||'')+'</span></div>' : '') +
+        '</div>';
     }).join('');
   }
 
@@ -713,34 +707,33 @@
     }).sort(function(a,b){ return b.value - a.value; });
     renderBarChart(document.getElementById('reportChart'), rows);
 
-    var body = document.getElementById('reportTableBody');
+    var host = document.getElementById('reportList');
     var empty = document.getElementById('reportEmpty');
     if(statsList.length === 0){
-      body.innerHTML = '';
+      host.innerHTML = '';
       empty.style.display = 'block';
     } else {
       empty.style.display = 'none';
-      body.innerHTML = statsList.slice().sort(function(a,b){ return b.stats.total - a.stats.total; }).map(function(s){
+      host.innerHTML = statsList.slice().sort(function(a,b){ return b.stats.total - a.stats.total; }).map(function(s){
         var badge = '';
         if(maxEntry && s.driver.id === maxEntry.driver.id) badge = ' <span class="tag badge-max">mayor</span>';
         else if(minEntry && s.driver.id === minEntry.driver.id) badge = ' <span class="tag badge-min">menor</span>';
-        return '<tr>' +
-          '<td>'+escapeHtml(s.driver.name)+badge+'</td>' +
-          '<td class="num">'+fmtMoney(s.stats.total)+'</td>' +
-          '<td class="num">'+s.stats.workingDays+' / '+s.stats.totalDays+'</td>' +
-          '<td class="num">'+fmtMoney(s.stats.dailyAvg)+'</td>' +
-          '<td class="num">'+s.stats.weeks+'</td>' +
-          '<td class="num">'+fmtMoney(s.stats.weeklyAvg)+'</td>' +
-          '<td class="num">'+s.stats.months+'</td>' +
-          '<td class="num">'+fmtMoney(s.stats.monthlyAvg)+'</td>' +
-          '</tr>';
+        return '<div class="report-card">' +
+          '<div class="row1"><div class="title">'+escapeHtml(s.driver.name)+badge+'</div><div class="title">'+fmtMoney(s.stats.total)+'</div></div>' +
+          '<div class="mini-stats">' +
+            '<div class="mini-stat"><div class="label">Prom. diario</div><div class="value">'+fmtMoney(s.stats.dailyAvg)+'</div><div class="sub">'+s.stats.workingDays+'/'+s.stats.totalDays+' días trabajados</div></div>' +
+            '<div class="mini-stat"><div class="label">Prom. semanal</div><div class="value">'+fmtMoney(s.stats.weeklyAvg)+'</div><div class="sub">'+s.stats.weeks+' semanas</div></div>' +
+            '<div class="mini-stat"><div class="label">Prom. mensual</div><div class="value">'+fmtMoney(s.stats.monthlyAvg)+'</div><div class="sub">'+s.stats.months+' meses</div></div>' +
+            '<div class="mini-stat"><div class="label">Cargas</div><div class="value">'+s.stats.chargesCount+'</div></div>' +
+          '</div>' +
+        '</div>';
       }).join('');
     }
   }
 
   // ---------- Modals ----------
   function openModal(html){
-    document.getElementById('modalBody').innerHTML = html;
+    document.getElementById('modalBody').innerHTML = '<div class="sheet-handle"></div>' + html;
     document.getElementById('overlay').classList.add('show');
   }
   function closeModal(){
@@ -758,6 +751,25 @@
     if(actions) host.insertBefore(div, actions); else host.appendChild(div);
   }
 
+  function openSettingsModal(){
+    openModal(
+      '<h3>Ajustes</h3>' +
+      '<div class="field"><label>Tu nombre (para el historial de cambios)</label><input type="text" id="f-actor" placeholder="Ej. Cristhian" value="'+escapeHtml(actorName)+'"></div>' +
+      '<div class="settings-row"><span style="font-size:13px; color:var(--text-secondary);">Conexión</span><span id="saveStatusText" style="font-size:13px;"></span></div>' +
+      '<div class="settings-row"><span style="font-size:13px; color:var(--text-secondary);">Tema</span><button class="btn small" id="themeToggle">🌓 Cambiar tema</button></div>' +
+      '<div class="settings-row"><span style="font-size:13px; color:var(--text-secondary);">Respaldo</span><button class="btn small" id="exportBtnSide">⬇ Exportar copia</button></div>' +
+      '<p style="font-size:11.5px; color:var(--text-muted); line-height:1.5; margin-top:16px;">Los datos se guardan en una base de datos compartida en la nube — todos los usuarios de este enlace ven la misma información.</p>' +
+      '<div class="modal-actions"><button class="btn" data-action="close-modal">Cerrar</button></div>'
+    );
+    updateSaveStatus(saveState);
+    document.getElementById('f-actor').addEventListener('change', function(){ setActor(this.value); });
+    document.getElementById('themeToggle').addEventListener('click', function(){
+      var html = document.documentElement;
+      html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+    document.getElementById('exportBtnSide').addEventListener('click', exportData);
+  }
+
   function openAddDriverModal(){
     openModal(
       '<h3>Nuevo conductor</h3>' +
@@ -766,13 +778,13 @@
         '<option value="own">Usa su propio carro</option>' +
         '<option value="company">Usa un carro de la empresa</option>' +
       '</select></div>' +
-      '<div class="field"><label>Teléfono (opcional)</label><input type="text" id="f-phone"></div>' +
+      '<div class="field"><label>Teléfono (opcional)</label><input type="text" id="f-phone" inputmode="tel"></div>' +
       '<div class="field" id="f-vehicle-wrap"><label>Vehículo asignado (opcional)</label><input type="text" id="f-vehicle" placeholder="Ej. Nissan NP300, placa ABC-123"></div>' +
       '<div class="field"><label>Día de descanso fijo por semana (opcional)</label><select id="f-restday">' +
         '<option value="">Sin día fijo</option>' +
         WEEKDAYS.map(function(w,i){ return '<option value="'+i+'">'+w+'</option>'; }).join('') +
       '</select></div>' +
-      '<div class="modal-actions"><button class="btn" data-action="close-modal">Cancelar</button><button class="btn primary" data-action="save-driver">Guardar</button></div>'
+      '<div class="modal-actions"><button class="btn primary" data-action="save-driver">Guardar</button><button class="btn" data-action="close-modal">Cancelar</button></div>'
     );
   }
 
@@ -787,12 +799,11 @@
       chargesHtml =
         '<h2 class="section-title">Este mes</h2>' +
         '<div class="field-row">' +
-          '<div class="field"><label>Total gastado</label><div style="font-weight:600;">'+fmtMoney(stats.total)+'</div></div>' +
-          '<div class="field"><label>Prom. diario</label><div style="font-weight:600;">'+fmtMoney(stats.dailyAvg)+'</div></div>' +
-          '<div class="field"><label>Prom. semanal</label><div style="font-weight:600;">'+fmtMoney(stats.weeklyAvg)+'</div></div>' +
+          '<div class="field"><label>Total</label><div style="font-weight:700;">'+fmtMoney(stats.total)+'</div></div>' +
+          '<div class="field"><label>Prom. diario</label><div style="font-weight:700;">'+fmtMoney(stats.dailyAvg)+'</div></div>' +
         '</div>' +
         '<h2 class="section-title">Últimas cargas</h2>' +
-        (driverCharges.length ? driverCharges.map(function(c){ return '<div style="font-size:13px; padding:6px 0; border-bottom:1px solid var(--grid);">'+fmtDate(c.date)+' '+escapeHtml(c.time)+' — '+fmtMoney(c.amount)+'</div>'; }).join('') : '<div class="empty">Sin cargas registradas.</div>');
+        (driverCharges.length ? driverCharges.map(function(c){ return '<div style="font-size:13px; padding:7px 0; border-bottom:1px solid var(--grid);">'+fmtDate(c.date)+' '+escapeHtml(c.time)+' — '+fmtMoney(c.amount)+'</div>'; }).join('') : '<div class="empty">Sin cargas registradas.</div>');
     }
     var restChips = (d.extraRestDates || []).map(function(dt){
       return '<span class="rest-chip">'+fmtDate(dt)+' <button data-action="remove-rest-date" data-id="'+d.id+'" data-date="'+dt+'">✕</button></span>';
@@ -805,21 +816,21 @@
         '<option value="own" '+(d.type==='own'?'selected':'')+'>Usa su propio carro</option>' +
         '<option value="company" '+(d.type==='company'?'selected':'')+'>Usa un carro de la empresa</option>' +
       '</select></div>' +
-      '<div class="field"><label>Teléfono (opcional)</label><input type="text" id="f-phone" value="'+escapeHtml(d.phone||'')+'"></div>' +
+      '<div class="field"><label>Teléfono (opcional)</label><input type="text" id="f-phone" inputmode="tel" value="'+escapeHtml(d.phone||'')+'"></div>' +
       '<div class="field"><label>Vehículo asignado (opcional)</label><input type="text" id="f-vehicle" value="'+escapeHtml(d.vehicle||'')+'"></div>' +
       '<div class="field"><label>Día de descanso fijo por semana</label><select id="f-restday">' +
         '<option value="">Sin día fijo</option>' +
         WEEKDAYS.map(function(w,i){ return '<option value="'+i+'" '+(String(d.weeklyRestDay)===String(i)?'selected':'')+'>'+w+'</option>'; }).join('') +
       '</select></div>' +
       '<div class="field"><label>Días de descanso adicionales / específicos</label>' +
-        '<div style="display:flex; gap:6px;"><input type="date" id="f-extra-rest"><button class="btn small" data-action="add-rest-date" data-id="'+d.id+'">Agregar</button></div>' +
+        '<div style="display:flex; gap:6px;"><input type="date" id="f-extra-rest" style="flex:1;"><button class="btn small" data-action="add-rest-date" data-id="'+d.id+'">Agregar</button></div>' +
         '<div class="rest-chip-list" id="restChipList">'+(restChips || '<span style="font-size:12px; color:var(--text-muted);">Ninguno agregado</span>')+'</div>' +
       '</div>' +
       chargesHtml +
       '<div class="modal-actions">' +
-        '<button class="btn danger" data-action="delete-driver" data-id="'+d.id+'">Eliminar conductor</button>' +
-        '<button class="btn" data-action="close-modal">Cerrar</button>' +
         '<button class="btn primary" data-action="save-driver-edit" data-id="'+d.id+'">Guardar cambios</button>' +
+        '<button class="btn" data-action="close-modal">Cerrar</button>' +
+        '<button class="btn danger" data-action="delete-driver" data-id="'+d.id+'">Eliminar conductor</button>' +
       '</div>'
     );
   }
@@ -834,18 +845,14 @@
     openModal(
       '<h3>'+(presetDriver ? 'Cargar gasolina — '+escapeHtml(presetDriver.name) : 'Registrar carga de gasolina')+'</h3>' +
       '<div class="field"><label>Conductor</label><select id="f-driver">' + companyDrivers.map(function(d){ return '<option value="'+d.id+'" '+(presetDriverId===d.id?'selected':'')+'>'+escapeHtml(d.name)+'</option>'; }).join('') + '</select></div>' +
-      '<div class="field-row">' +
-        '<div class="field"><label>Monto total</label><input type="number" step="0.01" min="0" id="f-amount" placeholder="0.00"></div>' +
-      '</div>' +
+      '<div class="field"><label>Monto total</label><input type="number" step="0.01" min="0" inputmode="decimal" id="f-amount" placeholder="0.00"></div>' +
       '<div class="field-row">' +
         '<div class="field"><label>Fecha</label><input type="date" id="f-date" value="'+todayISO()+'"></div>' +
         '<div class="field"><label>Hora</label><input type="time" id="f-time" value="'+nowTime()+'"></div>' +
       '</div>' +
       '<div class="field"><label>Nota (opcional)</label><input type="text" id="f-note" placeholder="Ej. Gasolinera Pemex Centro"></div>' +
-      '<div class="modal-actions"><button class="btn" data-action="close-modal">Cancelar</button><button class="btn primary" data-action="save-charge">Guardar</button></div>'
+      '<div class="modal-actions"><button class="btn primary" data-action="save-charge">Guardar</button><button class="btn" data-action="close-modal">Cancelar</button></div>'
     );
-    var amountEl = document.getElementById('f-amount');
-    if(amountEl) amountEl.focus();
   }
 
   function openEditChargeModal(id){
@@ -854,17 +861,15 @@
     var d = driverById(c.driverId);
     var edits = state.history.filter(function(h){ return h.chargeId === id; }).length;
     openModal(
-      '<h3>Editar carga de gasolina — '+escapeHtml(d?d.name:'')+'</h3>' +
-      '<div class="field-row">' +
-        '<div class="field"><label>Monto total</label><input type="number" step="0.01" min="0" id="f-amount" value="'+c.amount+'"></div>' +
-      '</div>' +
+      '<h3>Editar carga — '+escapeHtml(d?d.name:'')+'</h3>' +
+      '<div class="field"><label>Monto total</label><input type="number" step="0.01" min="0" inputmode="decimal" id="f-amount" value="'+c.amount+'"></div>' +
       '<div class="field-row">' +
         '<div class="field"><label>Fecha</label><input type="date" id="f-date" value="'+c.date+'"></div>' +
         '<div class="field"><label>Hora</label><input type="time" id="f-time" value="'+c.time+'"></div>' +
       '</div>' +
       '<div class="field"><label>Nota (opcional)</label><input type="text" id="f-note" value="'+escapeHtml(c.note||'')+'"></div>' +
-      (edits > 0 ? '<div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Esta carga ya se editó '+edits+' vez/veces. Revisa el Historial de cambios para el detalle.</div>' : '') +
-      '<div class="modal-actions"><button class="btn" data-action="close-modal">Cancelar</button><button class="btn primary" data-action="save-charge-edit" data-id="'+c.id+'">Guardar cambios (registra en historial)</button></div>'
+      (edits > 0 ? '<div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Esta carga ya se editó '+edits+' vez/veces. Revisa el Historial para el detalle.</div>' : '') +
+      '<div class="modal-actions"><button class="btn primary" data-action="save-charge-edit" data-id="'+c.id+'">Guardar cambios</button><button class="btn" data-action="close-modal">Cancelar</button></div>'
     );
   }
 
@@ -976,24 +981,14 @@
   }
 
   // ---------- Event wiring ----------
-  document.querySelectorAll('.navbtn[data-tab]').forEach(function(btn){
-    btn.addEventListener('click', function(){ state.activeTab = btn.dataset.tab; render(); });
+  document.querySelectorAll('.bottom-nav button[data-tab]').forEach(function(btn){
+    btn.addEventListener('click', function(){ state.activeTab = btn.dataset.tab; render(); window.scrollTo(0,0); });
   });
 
+  document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
   document.getElementById('addDriverBtn').addEventListener('click', openAddDriverModal);
   document.getElementById('addChargeBtn').addEventListener('click', function(){ openAddChargeModal(); });
   document.getElementById('chargeFilterDriver').addEventListener('change', renderCharges);
-
-  document.getElementById('exportBtnSide').addEventListener('click', exportData);
-
-  document.getElementById('actorName').addEventListener('change', function(){
-    try { window.localStorage && window.localStorage.setItem('cf_actor_name', this.value.trim()); } catch(e){}
-  });
-
-  document.getElementById('themeToggle').addEventListener('click', function(){
-    var html = document.documentElement;
-    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-  });
 
   document.getElementById('overlay').addEventListener('click', function(e){ if(e.target.id === 'overlay') closeModal(); });
 
@@ -1017,7 +1012,7 @@
     renderReports();
   });
 
-  // Delegated clicks (driver list, charge table, modal buttons)
+  // Delegated clicks (driver list, charge cards, modal buttons)
   document.body.addEventListener('click', function(e){
     var el = e.target.closest('[data-action]');
     if(!el) return;
@@ -1047,3 +1042,4 @@
 </script>
 </body>
 </html>
+
