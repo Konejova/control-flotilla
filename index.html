@@ -155,6 +155,7 @@
   }
   .field-row { display:flex; gap: 10px; }
   .field-row .field { flex: 1; }
+  .date-hint { font-size: 11.5px; color: var(--text-muted); margin-top: -3px; }
 
   .empty { color: var(--text-muted); font-size: 13.5px; padding: 24px 10px; text-align:center; line-height:1.5; }
   .form-error { color: var(--status-critical); font-size: 13px; margin: -8px 0 12px 0; }
@@ -319,6 +320,10 @@
           <span style="color:var(--text-muted); font-size:12px;">a</span>
           <input type="date" id="rangeEnd">
         </div>
+        <div style="display:flex; gap:10px;">
+          <span class="date-hint" id="rangeStartHint" style="flex:1;"></span>
+          <span class="date-hint" id="rangeEndHint" style="flex:1;"></span>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:14px;">
@@ -366,8 +371,52 @@
   function nowTime(){ var d = new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
   function fmtMoney(n){ n = n || 0; return '$' + n.toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2}); }
   function fmtDate(iso){ if(!iso) return ''; var p = iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+  function fmtDateTime(iso){
+    if(!iso) return '';
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return '';
+    var dd = String(d.getDate()).padStart(2,'0');
+    var mm = String(d.getMonth()+1).padStart(2,'0');
+    var yyyy = d.getFullYear();
+    var hh = String(d.getHours()).padStart(2,'0');
+    var min = String(d.getMinutes()).padStart(2,'0');
+    return dd+'/'+mm+'/'+yyyy+', '+hh+':'+min;
+  }
+  // Native <input type="date"> shows DD/MM vs MM/DD depending on the device's
+  // own language settings (the browser controls that, not this page) — this
+  // hint guarantees a DD/MM/AAAA readout is always visible no matter the device.
+  function wireDateHint(inputId, hintId){
+    var input = document.getElementById(inputId);
+    var hint = document.getElementById(hintId);
+    if(!input || !hint) return;
+    function update(){ hint.textContent = input.value ? fmtDate(input.value) : ''; }
+    input.addEventListener('input', update);
+    input.addEventListener('change', update);
+    update();
+  }
   function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function driverById(id){ return state.drivers.find(function(d){ return d.id === id; }); }
+
+  function lastChargeForDriver(driverId){
+    var list = state.charges.filter(function(c){ return c.driverId === driverId; })
+      .slice().sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); });
+    return list.length ? list[0] : null;
+  }
+
+  function lastChargeBoxHtml(driverId){
+    var last = lastChargeForDriver(driverId);
+    if(!last){
+      return '<div class="empty" style="padding:10px; font-size:12.5px; margin-bottom:14px;">Aún no hay cargas registradas para este conductor.</div>';
+    }
+    return '<div class="card" style="background:var(--surface-2); padding:12px 14px; margin-bottom:14px;">' +
+      '<div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Última carga registrada</div>' +
+      '<div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">' +
+        '<span style="font-size:13px; color:var(--text-secondary);">'+fmtDate(last.date)+' · '+escapeHtml(last.time)+'</span>' +
+        '<span style="font-weight:700; font-size:15px; font-variant-numeric:tabular-nums;">'+fmtMoney(last.amount)+'</span>' +
+      '</div>' +
+      (last.note ? '<div style="font-size:12px; color:var(--text-muted); margin-top:4px;">"'+escapeHtml(last.note)+'"</div>' : '') +
+    '</div>';
+  }
 
   // ---------- "Who am I" (remembered locally per device, purely a UX convenience) ----------
   var actorName = '';
@@ -679,7 +728,7 @@
       var dtChanged = (r.before.date !== r.after.date) || (r.before.time !== r.after.time);
       return '<div class="entry-card">' +
         '<div class="row1"><div class="title">'+escapeHtml(r.driverName)+'</div></div>' +
-        '<div class="meta">'+new Date(r.editedAt).toLocaleString('es-MX')+' · editado por '+escapeHtml(r.editedBy || '—')+'</div>' +
+        '<div class="meta">'+fmtDateTime(r.editedAt)+' · editado por '+escapeHtml(r.editedBy || '—')+'</div>' +
         (amtChanged ? '<div class="diffline">Monto: <span class="diff-old">'+fmtMoney(r.before.amount)+'</span> → <span class="diff-new">'+fmtMoney(r.after.amount)+'</span></div>' : '') +
         (dtChanged ? '<div class="diffline">Fecha/hora: <span class="diff-old">'+fmtDate(r.before.date)+' '+escapeHtml(r.before.time||'')+'</span> → <span class="diff-new">'+fmtDate(r.after.date)+' '+escapeHtml(r.after.time||'')+'</span></div>' : '') +
         '</div>';
@@ -691,6 +740,8 @@
   function renderReports(){
     document.getElementById('rangeStart').value = reportRange.start;
     document.getElementById('rangeEnd').value = reportRange.end;
+    document.getElementById('rangeStartHint').textContent = fmtDate(reportRange.start);
+    document.getElementById('rangeEndHint').textContent = fmtDate(reportRange.end);
 
     var companyDrivers = state.drivers.filter(function(d){ return d.type === 'company'; });
     var statsList = companyDrivers.map(function(d){ return {driver: d, stats: computeStats(d, reportRange.start, reportRange.end)}; });
@@ -824,6 +875,7 @@
       '</select></div>' +
       '<div class="field"><label>Días de descanso adicionales / específicos</label>' +
         '<div style="display:flex; gap:6px;"><input type="date" id="f-extra-rest" style="flex:1;"><button class="btn small" data-action="add-rest-date" data-id="'+d.id+'">Agregar</button></div>' +
+        '<span class="date-hint" id="extraRestHint"></span>' +
         '<div class="rest-chip-list" id="restChipList">'+(restChips || '<span style="font-size:12px; color:var(--text-muted);">Ninguno agregado</span>')+'</div>' +
       '</div>' +
       chargesHtml +
@@ -833,6 +885,7 @@
         '<button class="btn danger" data-action="delete-driver" data-id="'+d.id+'">Eliminar conductor</button>' +
       '</div>'
     );
+    wireDateHint('f-extra-rest', 'extraRestHint');
   }
 
   function openAddChargeModal(presetDriverId){
@@ -842,17 +895,23 @@
       return;
     }
     var presetDriver = presetDriverId ? driverById(presetDriverId) : null;
+    var initialDriverId = presetDriverId || companyDrivers[0].id;
     openModal(
       '<h3>'+(presetDriver ? 'Cargar gasolina — '+escapeHtml(presetDriver.name) : 'Registrar carga de gasolina')+'</h3>' +
       '<div class="field"><label>Conductor</label><select id="f-driver">' + companyDrivers.map(function(d){ return '<option value="'+d.id+'" '+(presetDriverId===d.id?'selected':'')+'>'+escapeHtml(d.name)+'</option>'; }).join('') + '</select></div>' +
+      '<div id="lastChargeBox">'+lastChargeBoxHtml(initialDriverId)+'</div>' +
       '<div class="field"><label>Monto total</label><input type="number" step="0.01" min="0" inputmode="decimal" id="f-amount" placeholder="0.00"></div>' +
       '<div class="field-row">' +
-        '<div class="field"><label>Fecha</label><input type="date" id="f-date" value="'+todayISO()+'"></div>' +
+        '<div class="field"><label>Fecha</label><input type="date" id="f-date" value="'+todayISO()+'"><span class="date-hint" id="f-date-hint"></span></div>' +
         '<div class="field"><label>Hora</label><input type="time" id="f-time" value="'+nowTime()+'"></div>' +
       '</div>' +
       '<div class="field"><label>Nota (opcional)</label><input type="text" id="f-note" placeholder="Ej. Gasolinera Pemex Centro"></div>' +
       '<div class="modal-actions"><button class="btn primary" data-action="save-charge">Guardar</button><button class="btn" data-action="close-modal">Cancelar</button></div>'
     );
+    document.getElementById('f-driver').addEventListener('change', function(){
+      document.getElementById('lastChargeBox').innerHTML = lastChargeBoxHtml(this.value);
+    });
+    wireDateHint('f-date', 'f-date-hint');
   }
 
   function openEditChargeModal(id){
@@ -864,13 +923,14 @@
       '<h3>Editar carga — '+escapeHtml(d?d.name:'')+'</h3>' +
       '<div class="field"><label>Monto total</label><input type="number" step="0.01" min="0" inputmode="decimal" id="f-amount" value="'+c.amount+'"></div>' +
       '<div class="field-row">' +
-        '<div class="field"><label>Fecha</label><input type="date" id="f-date" value="'+c.date+'"></div>' +
+        '<div class="field"><label>Fecha</label><input type="date" id="f-date" value="'+c.date+'"><span class="date-hint" id="f-date-hint"></span></div>' +
         '<div class="field"><label>Hora</label><input type="time" id="f-time" value="'+c.time+'"></div>' +
       '</div>' +
       '<div class="field"><label>Nota (opcional)</label><input type="text" id="f-note" value="'+escapeHtml(c.note||'')+'"></div>' +
       (edits > 0 ? '<div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Esta carga ya se editó '+edits+' vez/veces. Revisa el Historial para el detalle.</div>' : '') +
       '<div class="modal-actions"><button class="btn primary" data-action="save-charge-edit" data-id="'+c.id+'">Guardar cambios</button><button class="btn" data-action="close-modal">Cancelar</button></div>'
     );
+    wireDateHint('f-date', 'f-date-hint');
   }
 
   // ---------- Actions (all call the API, then reload from the shared database) ----------
@@ -1042,4 +1102,5 @@
 </script>
 </body>
 </html>
+
 
