@@ -5,7 +5,8 @@
   "description": "Control de flotilla - conductores y gasolina (API + frontend)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "local": "node server.local.js"
   },
   "engines": {
     "node": ">=18"

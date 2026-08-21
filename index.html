@@ -258,10 +258,66 @@
 
   .settings-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 12px 0; border-bottom: 1px solid var(--grid); }
   .settings-row:last-of-type { border-bottom: none; }
+
+  /* ==================================================================
+     Responsive: tablet & desktop. Everything above this line is the
+     mobile design and stays exactly as-is below 640px. These queries
+     only ADD layout for wider screens.
+     ================================================================== */
+
+  .side-nav { display: none; }
+
+  /* ---------- Tablet (>=640px): wider shell, bottom-nav stays ---------- */
+  @media (min-width: 640px) {
+    .app-shell { max-width: 760px; }
+    .charge-grid { grid-template-columns: repeat(3, 1fr); }
+    .stat-grid { grid-template-columns: repeat(4, 1fr); }
+    .entry-list { display:grid; grid-template-columns: repeat(2, 1fr); align-content:start; }
+    .driver-list { display:grid; grid-template-columns: repeat(2, 1fr); align-content:start; }
+  }
+
+  /* ---------- Desktop (>=1024px): sidebar nav replaces bottom-nav ---------- */
+  @media (min-width: 1024px) {
+    .page-wrap { align-items: flex-start; padding: 28px 20px; gap: 20px; }
+    .app-shell { max-width: 1040px; min-height: auto; border-radius: 16px; overflow: hidden; }
+    .bottom-nav { display: none; }
+    .side-nav {
+      display: flex; flex-direction: column; gap: 3px;
+      width: 220px; flex-shrink: 0; padding: 8px 10px;
+      position: sticky; top: 28px;
+    }
+    .side-nav-brand { font-weight: 700; font-size: 15px; padding: 8px 10px 18px 10px; }
+    .side-nav button {
+      display:flex; align-items:center; gap:11px; text-align:left; width:100%;
+      padding: 11px 12px; border-radius: 10px; border:none; background:transparent;
+      color: var(--text-secondary); font-family:inherit; font-size:14px; font-weight:600; cursor:pointer;
+    }
+    .side-nav button .ic { font-size:18px; }
+    .side-nav button:hover { background: var(--surface-2); }
+    .side-nav button.active { background: var(--series-1-soft); color: var(--series-1); }
+    .main { padding: 20px 26px 26px 26px; }
+    .charge-grid { grid-template-columns: repeat(4, 1fr); }
+    .entry-list { grid-template-columns: repeat(3, 1fr); }
+    .driver-list { grid-template-columns: repeat(3, 1fr); }
+    .overlay { align-items: center; }
+    .modal {
+      border-radius: 18px; border-bottom: 1px solid var(--border);
+      max-width: 480px; margin: 20px; padding-bottom: 18px;
+    }
+    .modal .sheet-handle { display: none; }
+  }
 </style>
 </head>
 <body>
 <div class="page-wrap">
+<nav class="side-nav" id="sideNav">
+  <div class="side-nav-brand">⛽ Control de Flotilla</div>
+  <button data-tab="charges" class="active"><span class="ic">⛽</span>Cargas</button>
+  <button data-tab="drivers"><span class="ic">🧑‍✈️</span>Conductores</button>
+  <button data-tab="history"><span class="ic">🕘</span>Historial</button>
+  <button data-tab="reports"><span class="ic">📈</span>Reportes</button>
+  <button data-tab="dashboard"><span class="ic">📊</span>Dashboard</button>
+</nav>
 <div class="app-shell viz-root">
 
   <div class="topbar">
@@ -567,7 +623,7 @@
   }
 
   function renderNav(){
-    document.querySelectorAll('.bottom-nav button').forEach(function(btn){
+    document.querySelectorAll('[data-tab]').forEach(function(btn){
       btn.classList.toggle('active', btn.dataset.tab === state.activeTab);
     });
     document.querySelectorAll('section.tab').forEach(function(sec){
@@ -1041,7 +1097,7 @@
   }
 
   // ---------- Event wiring ----------
-  document.querySelectorAll('.bottom-nav button[data-tab]').forEach(function(btn){
+  document.querySelectorAll('[data-tab]').forEach(function(btn){
     btn.addEventListener('click', function(){ state.activeTab = btn.dataset.tab; render(); window.scrollTo(0,0); });
   });
 
@@ -1102,5 +1158,3 @@
 </script>
 </body>
 </html>
-
-
