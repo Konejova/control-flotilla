@@ -170,6 +170,24 @@
   .driver-item .name { font-weight: 700; font-size: 14.5px; }
   .driver-item .meta { font-size: 12px; color: var(--text-muted); margin-top:3px; line-height:1.4; }
   .driver-item .right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
+  .driver-item .left-row { display:flex; align-items:center; gap:12px; min-width:0; }
+
+  /* ---------- Vehicle photo (Autos list, add/edit form, charge screen) ---------- */
+  .veh-thumb {
+    width: 52px; height: 52px; flex-shrink:0; border-radius: 10px; overflow:hidden;
+    background: var(--surface-1); border: 1px solid var(--grid);
+    display:flex; align-items:center; justify-content:center; font-size: 22px;
+  }
+  .veh-thumb img { width:100%; height:100%; object-fit: cover; display:block; }
+  .photo-upload-row { display:flex; align-items:center; gap:12px; margin-bottom: 14px; }
+  .photo-upload-row .veh-thumb { width: 64px; height: 64px; font-size: 26px; }
+  .photo-upload-row .upload-btns { display:flex; flex-direction:column; gap:6px; }
+  .vehicle-photo-box {
+    margin-bottom: 14px; border-radius: 12px; overflow:hidden; border: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .vehicle-photo-box img { width:100%; max-height: 220px; object-fit: cover; display:block; }
+  .vehicle-photo-box .vp-caption { padding: 8px 12px; font-size: 12.5px; color: var(--text-secondary); }
 
   /* ---------- Modal: bottom sheet ---------- */
   .overlay {
@@ -219,8 +237,9 @@
   .charge-card .thumb {
     aspect-ratio: 1 / 1; background: var(--surface-1); border: 1px solid var(--grid);
     border-radius: 10px; display:flex; align-items:center; justify-content:center;
-    font-size: 32px; margin-bottom: 10px;
+    font-size: 32px; margin-bottom: 10px; overflow:hidden;
   }
+  .charge-card .thumb img { width:100%; height:100%; object-fit: cover; display:block; }
   .charge-card .ctitle { font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
   .charge-card .cmeta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
   .charge-card .info-btn {
@@ -314,8 +333,10 @@
   <div class="side-nav-brand">⛽ Control de Flotilla</div>
   <button data-tab="charges" class="active"><span class="ic">⛽</span>Cargas</button>
   <button data-tab="drivers"><span class="ic">🧑‍✈️</span>Conductores</button>
+  <button data-tab="autos"><span class="ic">🚚</span>Autos</button>
   <button data-tab="history"><span class="ic">🕘</span>Historial</button>
   <button data-tab="reports"><span class="ic">📈</span>Reportes</button>
+  <button data-tab="reconcile"><span class="ic">✅</span>Conciliar</button>
   <button data-tab="dashboard"><span class="ic">📊</span>Dashboard</button>
 </nav>
 <div class="app-shell viz-root">
@@ -342,6 +363,15 @@
         <button class="btn primary block" id="addDriverBtn">+ Nuevo conductor</button>
       </div>
       <div class="driver-list" id="driverList"></div>
+    </section>
+
+    <!-- AUTOS -->
+    <section class="tab" id="tab-autos">
+      <div class="toolbar">
+        <button class="btn primary block" id="addVehicleBtn">+ Nuevo auto</button>
+      </div>
+      <div class="driver-list" id="vehicleList"></div>
+      <div class="empty" id="vehicleEmpty" style="display:none;">Aún no hay autos registrados. Agrega el primero con "+ Nuevo auto".</div>
     </section>
 
     <!-- CHARGES (landing screen) -->
@@ -383,6 +413,15 @@
       </div>
 
       <div class="card" style="margin-bottom:14px;">
+        <h2 class="section-title" style="margin-top:0;">Exportar cargas de gasolina</h2>
+        <div class="toolbar" style="margin-bottom:0;">
+          <select id="reportExportDriver"><option value="">Todos los conductores</option></select>
+          <button class="btn primary" id="exportExcelBtn">⬇ Exportar a Excel</button>
+        </div>
+        <p style="font-size:11.5px; color:var(--text-muted); line-height:1.5; margin: 10px 0 0 0;">Descarga las cargas del rango de fechas y conductor de arriba en un archivo .xlsx, listo para pegar en tu planilla de ganancias.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:14px;">
         <h2 class="section-title" style="margin-top:0;">Promedio diario por conductor</h2>
         <div id="reportChart"></div>
       </div>
@@ -392,13 +431,38 @@
       <div class="empty" id="reportEmpty" style="display:none;">No hay conductores con auto de la empresa registrados.</div>
     </section>
 
+    <!-- RECONCILE (Conciliación semanal) -->
+    <section class="tab" id="tab-reconcile">
+      <div class="card" style="margin-bottom:14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <button class="btn small" id="reconcilePrevWeek">← Anterior</button>
+          <button class="btn small" id="reconcileThisWeek">Esta semana</button>
+          <button class="btn small" id="reconcileNextWeek">Siguiente →</button>
+        </div>
+        <div style="text-align:center; font-weight:700; font-size:14.5px; margin-top:12px;" id="reconcileWeekLabel"></div>
+        <div style="text-align:center; font-size:11.5px; color:var(--text-muted); margin-top:2px;">Semana laboral: sábado a viernes</div>
+      </div>
+
+      <div class="grid stat-grid" id="reconcileStats" style="margin-bottom:14px;"></div>
+
+      <div class="toolbar">
+        <select id="reconcileFilterDriver"><option value="">Todos los conductores</option></select>
+        <button class="btn small" id="reconcileMarkAllBtn">Marcar pendientes como conciliados</button>
+      </div>
+
+      <div class="entry-list" id="reconcileList"></div>
+      <div class="empty" id="reconcileEmpty" style="display:none;">No hay cargas de gasolina registradas en esta semana.</div>
+    </section>
+
   </div>
 
   <div class="bottom-nav">
     <button data-tab="charges" class="active"><span class="ic">⛽</span>Cargas</button>
     <button data-tab="drivers"><span class="ic">🧑‍✈️</span>Conductores</button>
+    <button data-tab="autos"><span class="ic">🚚</span>Autos</button>
     <button data-tab="history"><span class="ic">🕘</span>Historial</button>
     <button data-tab="reports"><span class="ic">📈</span>Reportes</button>
+    <button data-tab="reconcile"><span class="ic">✅</span>Conciliar</button>
     <button data-tab="dashboard"><span class="ic">📊</span>Dashboard</button>
   </div>
 
@@ -416,9 +480,10 @@
 
   // ---------- State ----------
   var state = {
-    drivers: [],   // {id, name, phone, type: 'own'|'company', vehicle, weeklyRestDay: number|null, extraRestDates: [iso]}
+    drivers: [],   // {id, name, phone, type: 'own'|'company', vehicle, weeklyRestDay: number|null, extraRestDates: [iso], vehicleId, vehicleAssignedMileage, vehicleAssignedDate}
     charges: [],   // {id, driverId, amount, date, time, note, createdBy, createdAt}
     history: [],   // {editedAt, editedBy, driverId, chargeId, before:{...}, after:{...}}
+    vehicles: [],  // {id, brand, model, year, plate, currentMileage, createdAt}
     activeTab: 'charges'
   };
   var WEEKDAYS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -452,6 +517,37 @@
   }
   function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function driverById(id){ return state.drivers.find(function(d){ return d.id === id; }); }
+
+  // Reads an image file picked by the user (gallery or camera), shrinks it to
+  // fit within maxDim on its longest side, and re-encodes as JPEG at a modest
+  // quality — keeps photos small enough to store as a data URL and send as
+  // plain JSON, no separate file upload/storage service needed.
+  function readAndCompressImage(file, maxDim, quality){
+    maxDim = maxDim || 900;
+    quality = quality || 0.72;
+    return new Promise(function(resolve, reject){
+      if(!file || !/^image\//.test(file.type)){ reject(new Error('Elige un archivo de imagen.')); return; }
+      var reader = new FileReader();
+      reader.onerror = function(){ reject(new Error('No se pudo leer la imagen.')); };
+      reader.onload = function(){
+        var img = new Image();
+        img.onerror = function(){ reject(new Error('No se pudo procesar la imagen.')); };
+        img.onload = function(){
+          var w = img.naturalWidth, h = img.naturalHeight;
+          if(w <= 0 || h <= 0){ reject(new Error('Imagen inválida.')); return; }
+          var scale = Math.min(1, maxDim / Math.max(w, h));
+          var cw = Math.round(w * scale), ch = Math.round(h * scale);
+          var canvas = document.createElement('canvas');
+          canvas.width = cw; canvas.height = ch;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, cw, ch);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   function lastChargeForDriver(driverId){
     var list = state.charges.filter(function(c){ return c.driverId === driverId; })
@@ -522,11 +618,12 @@
 
   function loadAll(){
     updateSaveStatus('loading');
-    return Promise.all([apiGet('/api/drivers'), apiGet('/api/charges'), apiGet('/api/history')])
+    return Promise.all([apiGet('/api/drivers'), apiGet('/api/charges'), apiGet('/api/history'), apiGet('/api/vehicles')])
       .then(function(results){
         state.drivers = results[0];
         state.charges = results[1];
         state.history = results[2];
+        state.vehicles = results[3];
         updateSaveStatus('connected');
         render();
       })
@@ -534,6 +631,8 @@
         updateSaveStatus('error');
       });
   }
+  function vehicleById(id){ return state.vehicles.find(function(v){ return v.id === id; }); }
+  function vehicleLabel(v){ return v.brand+' '+v.model+(v.year?' '+v.year:'')+' — '+v.plate; }
 
   // ---------- Date helpers ----------
   function eachDate(startStr, endStr, cb){
@@ -569,15 +668,25 @@
   }
 
   function computeStats(driver, startStr, endStr){
-    var charges = state.charges.filter(function(c){ return c.driverId === driver.id && c.date >= startStr && c.date <= endStr; });
+    // If the driver has a vehicle-assignment start date later than the requested
+    // range, clip the range to that date so the per-day average isn't diluted by
+    // days before this driver actually had this vehicle.
+    var effectiveStart = startStr;
+    if(driver.vehicleAssignedDate && driver.vehicleAssignedDate > effectiveStart){
+      effectiveStart = driver.vehicleAssignedDate;
+    }
+    if(effectiveStart > endStr){
+      return { total:0, totalDays:0, restDays:0, workingDays:0, dailyAvg:0, weeks:0, weeklyAvg:0, months:0, monthlyAvg:0, chargesCount:0, clipped: !!driver.vehicleAssignedDate };
+    }
+    var charges = state.charges.filter(function(c){ return c.driverId === driver.id && c.date >= effectiveStart && c.date <= endStr; });
     var total = charges.reduce(function(s,c){ return s + Number(c.amount); }, 0);
     var totalDays = 0, weekSet = new Set(), monthSet = new Set();
-    eachDate(startStr, endStr, function(dateStr){
+    eachDate(effectiveStart, endStr, function(dateStr){
       totalDays++;
       weekSet.add(weekKey(dateStr));
       monthSet.add(monthKey(dateStr));
     });
-    var restSet = driverRestDatesInRange(driver, startStr, endStr);
+    var restSet = driverRestDatesInRange(driver, effectiveStart, endStr);
     var workingDays = Math.max(totalDays - restSet.size, 0);
     var dailyAvg = workingDays > 0 ? total / workingDays : 0;
     var weeklyAvg = weekSet.size > 0 ? total / weekSet.size : 0;
@@ -585,7 +694,8 @@
     return {
       total: total, totalDays: totalDays, restDays: restSet.size, workingDays: workingDays,
       dailyAvg: dailyAvg, weeks: weekSet.size, weeklyAvg: weeklyAvg,
-      months: monthSet.size, monthlyAvg: monthlyAvg, chargesCount: charges.length
+      months: monthSet.size, monthlyAvg: monthlyAvg, chargesCount: charges.length,
+      clipped: effectiveStart > startStr
     };
   }
 
@@ -612,14 +722,34 @@
     return {start: dates[0], end: todayISO() > dates[dates.length-1] ? dates[dates.length-1] : todayISO(), };
   }
 
+  function isoDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+  // Nuestra semana laboral empieza sábado y termina viernes (no domingo–sábado
+  // como el calendario normal). Dado cualquier día, regresa el sábado–viernes
+  // que lo contiene.
+  function workWeekRange(dateStr){
+    var d = new Date((dateStr || todayISO()) + 'T00:00:00');
+    var day = d.getDay(); // 0 Dom..6 Sáb
+    var daysSinceSaturday = (day + 1) % 7; // Sáb=0, Dom=1, Lun=2 ... Vie=6
+    var start = new Date(d); start.setDate(d.getDate() - daysSinceSaturday);
+    var end = new Date(start); end.setDate(start.getDate() + 6);
+    return {start: isoDate(start), end: isoDate(end)};
+  }
+  function shiftWorkWeek(range, deltaWeeks){
+    var start = new Date(range.start + 'T00:00:00'); start.setDate(start.getDate() + deltaWeeks*7);
+    return workWeekRange(isoDate(start));
+  }
+
   // ---------- Rendering ----------
   function render(){
     renderNav();
     renderDashboard();
     renderDrivers();
+    renderAutos();
     renderCharges();
     renderHistory();
     renderReports();
+    renderReconcile();
   }
 
   function renderNav(){
@@ -629,7 +759,7 @@
     document.querySelectorAll('section.tab').forEach(function(sec){
       sec.classList.toggle('active', sec.id === 'tab-' + state.activeTab);
     });
-    var titles = {dashboard:'Dashboard', drivers:'Conductores', charges:'Cargas de gasolina', history:'Historial de cambios', reports:'Reportes'};
+    var titles = {dashboard:'Dashboard', drivers:'Conductores', autos:'Autos', charges:'Cargas de gasolina', history:'Historial de cambios', reports:'Reportes', reconcile:'Conciliación semanal'};
     document.getElementById('pageTitle').textContent = titles[state.activeTab] || '';
   }
 
@@ -684,7 +814,9 @@
 
   function driverMetaLine(d){
     var bits = [d.type === 'company' ? 'Auto de la empresa' : 'Auto propio'];
-    if(d.vehicle) bits.push(d.vehicle);
+    var v = d.vehicleId ? vehicleById(d.vehicleId) : null;
+    if(v) bits.push(vehicleLabel(v));
+    else if(d.vehicle) bits.push(d.vehicle);
     if(d.phone) bits.push(d.phone);
     if(d.weeklyRestDay !== null && d.weeklyRestDay !== undefined) bits.push('Descansa: ' + WEEKDAYS[d.weeklyRestDay]);
     return bits.join(' · ');
@@ -701,6 +833,37 @@
         '<div><div class="name">'+escapeHtml(d.name)+'</div><div class="meta">'+escapeHtml(driverMetaLine(d))+'</div></div>' +
         '<div class="right"><span class="tag '+(d.type==='company'?'company':'own')+'">'+(d.type==='company'?'Empresa':'Propio')+'</span>' +
         '<button class="btn small" data-action="open-driver" data-id="'+d.id+'">Ver / editar</button></div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function driverForVehicle(vehicleId){ return state.drivers.find(function(d){ return d.vehicleId === vehicleId; }); }
+
+  function vehicleMetaLine(v){
+    var bits = [(v.year ? v.year+' · ' : '')+v.plate, 'Millas actuales: '+Number(v.currentMileage).toLocaleString('es-MX')];
+    var driver = driverForVehicle(v.id);
+    if(driver) bits.push('Asignado a '+driver.name);
+    return bits.join(' · ');
+  }
+
+  function renderAutos(){
+    var host = document.getElementById('vehicleList');
+    var empty = document.getElementById('vehicleEmpty');
+    if(state.vehicles.length === 0){
+      host.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    host.innerHTML = state.vehicles.map(function(v){
+      var driver = driverForVehicle(v.id);
+      return '<div class="driver-item" data-vehicle-id="'+v.id+'">' +
+        '<div class="left-row">' +
+          '<div class="veh-thumb">'+(v.photo ? '<img src="'+v.photo+'" alt="">' : '🚚')+'</div>' +
+          '<div><div class="name">'+escapeHtml(v.brand+' '+v.model)+'</div><div class="meta">'+escapeHtml(vehicleMetaLine(v))+'</div></div>' +
+        '</div>' +
+        '<div class="right">'+(driver ? '<span class="tag company">Asignado</span>' : '<span class="tag own">Disponible</span>') +
+        '<button class="btn small" data-action="open-vehicle" data-id="'+v.id+'">Ver / editar</button></div>' +
         '</div>';
     }).join('');
   }
@@ -723,9 +886,11 @@
     host.innerHTML = companyDrivers.map(function(d){
       var stats = computeStats(d, mr.start, mr.end);
       var metaText = stats.chargesCount > 0 ? 'Este mes: ' + fmtMoney(stats.total) : 'Sin cargas este mes';
+      var v = d.vehicleId ? vehicleById(d.vehicleId) : null;
+      var thumbInner = (v && v.photo) ? '<img src="'+v.photo+'" alt="">' : '🚚';
       return '<div class="charge-card" data-action="open-charge-for-driver" data-id="'+d.id+'">' +
         '<button class="info-btn" data-action="open-driver" data-id="'+d.id+'" title="Ver conductor">i</button>' +
-        '<div class="thumb">🚚</div>' +
+        '<div class="thumb">'+thumbInner+'</div>' +
         '<div class="ctitle">'+escapeHtml(d.name)+'</div>' +
         '<div class="cmeta">'+escapeHtml(metaText)+'</div>' +
         '</div>';
@@ -752,9 +917,10 @@
       var d = driverById(c.driverId);
       var edits = editCounts[c.id] || 0;
       var editedTag = edits > 0 ? ' <span class="tag" title="Esta carga fue editada">editada ×'+edits+'</span>' : '';
+      var reconciledTag = c.reconciled ? ' <span class="tag badge-min" title="Ya está en el sistema de contabilidad">✓ conciliada</span>' : '';
       return '<div class="entry-card">' +
         '<div class="row1"><div class="title">'+escapeHtml(d ? d.name : '(conductor eliminado)')+'</div><div class="amount">'+fmtMoney(c.amount)+'</div></div>' +
-        '<div class="meta">'+fmtDate(c.date)+' · '+escapeHtml(c.time||'')+editedTag+(c.note ? '<br><span class="note">'+escapeHtml(c.note)+'</span>' : '')+'</div>' +
+        '<div class="meta">'+fmtDate(c.date)+' · '+escapeHtml(c.time||'')+editedTag+reconciledTag+(c.note ? '<br><span class="note">'+escapeHtml(c.note)+'</span>' : '')+'</div>' +
         '<div class="actions">' +
           '<button class="btn small" data-action="edit-charge" data-id="'+c.id+'">Editar</button>' +
           '<button class="btn small danger" data-action="delete-charge" data-id="'+c.id+'">Eliminar</button>' +
@@ -793,11 +959,19 @@
 
   var reportRange = (function(){ var r = monthRange(); return r; })();
 
+  function populateReportExportDriverSelect(){
+    var sel = document.getElementById('reportExportDriver');
+    var current = sel.value;
+    sel.innerHTML = '<option value="">Todos los conductores</option>' + state.drivers.filter(function(d){return d.type==='company';}).map(function(d){ return '<option value="'+d.id+'">'+escapeHtml(d.name)+'</option>'; }).join('');
+    sel.value = current;
+  }
+
   function renderReports(){
     document.getElementById('rangeStart').value = reportRange.start;
     document.getElementById('rangeEnd').value = reportRange.end;
     document.getElementById('rangeStartHint').textContent = fmtDate(reportRange.start);
     document.getElementById('rangeEndHint').textContent = fmtDate(reportRange.end);
+    populateReportExportDriverSelect();
 
     var companyDrivers = state.drivers.filter(function(d){ return d.type === 'company'; });
     var statsList = companyDrivers.map(function(d){ return {driver: d, stats: computeStats(d, reportRange.start, reportRange.end)}; });
@@ -833,9 +1007,94 @@
             '<div class="mini-stat"><div class="label">Prom. mensual</div><div class="value">'+fmtMoney(s.stats.monthlyAvg)+'</div><div class="sub">'+s.stats.months+' meses</div></div>' +
             '<div class="mini-stat"><div class="label">Cargas</div><div class="value">'+s.stats.chargesCount+'</div></div>' +
           '</div>' +
+          (s.stats.clipped ? '<div style="font-size:11px; color:var(--text-muted); margin-top:8px;">Calculado desde el '+fmtDate(s.driver.vehicleAssignedDate)+' (fecha de inicio con su auto asignado).</div>' : '') +
         '</div>';
       }).join('');
     }
+  }
+
+  // ---------- Conciliación semanal (sábado a viernes) ----------
+  var reconcileWeek = workWeekRange(todayISO());
+
+  function populateReconcileDriverSelect(){
+    var sel = document.getElementById('reconcileFilterDriver');
+    var current = sel.value;
+    sel.innerHTML = '<option value="">Todos los conductores</option>' + state.drivers.filter(function(d){return d.type==='company';}).map(function(d){ return '<option value="'+d.id+'">'+escapeHtml(d.name)+'</option>'; }).join('');
+    sel.value = current;
+  }
+
+  function reconcileWeekCharges(){
+    var filterId = document.getElementById('reconcileFilterDriver').value;
+    return state.charges.filter(function(c){
+      return c.date >= reconcileWeek.start && c.date <= reconcileWeek.end && (!filterId || c.driverId === filterId);
+    }).slice().sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); });
+  }
+
+  function renderReconcile(){
+    document.getElementById('reconcileWeekLabel').textContent = fmtDate(reconcileWeek.start)+' – '+fmtDate(reconcileWeek.end);
+    populateReconcileDriverSelect();
+
+    var weekCharges = reconcileWeekCharges();
+    var total = weekCharges.reduce(function(s,c){ return s + Number(c.amount); }, 0);
+    var reconciledCharges = weekCharges.filter(function(c){ return c.reconciled; });
+    var pendingCharges = weekCharges.filter(function(c){ return !c.reconciled; });
+    var reconciledTotal = reconciledCharges.reduce(function(s,c){ return s + Number(c.amount); }, 0);
+    var pendingTotal = pendingCharges.reduce(function(s,c){ return s + Number(c.amount); }, 0);
+
+    var tiles = [
+      {label:'Total de la semana', value: fmtMoney(total), sub: weekCharges.length+' carga'+(weekCharges.length===1?'':'s')},
+      {label:'Ya conciliado', value: fmtMoney(reconciledTotal), sub: reconciledCharges.length+' carga'+(reconciledCharges.length===1?'':'s')},
+      {label:'Pendiente', value: fmtMoney(pendingTotal), sub: pendingCharges.length+' carga'+(pendingCharges.length===1?'':'s')}
+    ];
+    document.getElementById('reconcileStats').innerHTML = tiles.map(function(t){
+      return '<div class="card stat-tile"><div class="label">'+escapeHtml(t.label)+'</div><div class="value">'+escapeHtml(t.value)+'</div><div class="sub">'+escapeHtml(t.sub)+'</div></div>';
+    }).join('');
+
+    var markAllBtn = document.getElementById('reconcileMarkAllBtn');
+    markAllBtn.disabled = pendingCharges.length === 0;
+    markAllBtn.textContent = pendingCharges.length
+      ? 'Marcar '+pendingCharges.length+' pendiente'+(pendingCharges.length===1?'':'s')+' como conciliado'+(pendingCharges.length===1?'':'s')
+      : 'No hay pendientes';
+
+    var host = document.getElementById('reconcileList');
+    var empty = document.getElementById('reconcileEmpty');
+    if(weekCharges.length === 0){
+      host.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    host.innerHTML = weekCharges.map(function(c){
+      var d = driverById(c.driverId);
+      return '<div class="entry-card">' +
+        '<div class="row1"><div class="title">'+escapeHtml(d?d.name:'(conductor eliminado)')+'</div><div class="amount">'+fmtMoney(c.amount)+'</div></div>' +
+        '<div class="meta">'+fmtDate(c.date)+' · '+escapeHtml(c.time||'')+(c.note ? '<br><span class="note">'+escapeHtml(c.note)+'</span>' : '')+'</div>' +
+        (c.reconciled ? '<div class="meta" style="margin-top:6px;"><span class="tag badge-min">✓ Conciliado'+(c.reconciledBy?' por '+escapeHtml(c.reconciledBy):'')+'</span></div>' : '') +
+        '<div class="actions">' +
+          (c.reconciled
+            ? '<button class="btn small" data-action="unreconcile-charge" data-id="'+c.id+'">Desmarcar</button>'
+            : '<button class="btn small primary" data-action="reconcile-charge" data-id="'+c.id+'">Marcar conciliado</button>') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function setChargeReconciled(id, reconciled){
+    return apiSend('PUT', '/api/charges/' + id + '/reconcile', {reconciled: reconciled, actor: getActor()});
+  }
+  function reconcileCharge(id){
+    setChargeReconciled(id, true).then(loadAll).catch(function(e){ alert(e.message); });
+  }
+  function unreconcileCharge(id){
+    setChargeReconciled(id, false).then(loadAll).catch(function(e){ alert(e.message); });
+  }
+  function markAllPendingReconciled(){
+    var pending = reconcileWeekCharges().filter(function(c){ return !c.reconciled; });
+    if(pending.length === 0) return;
+    if(!confirm('¿Marcar '+pending.length+' carga(s) pendiente(s) de esta semana como conciliadas?')) return;
+    Promise.all(pending.map(function(c){ return setChargeReconciled(c.id, true); }))
+      .then(loadAll)
+      .catch(function(e){ alert(e.message); return loadAll(); });
   }
 
   // ---------- Modals ----------
@@ -877,6 +1136,30 @@
     document.getElementById('exportBtnSide').addEventListener('click', exportData);
   }
 
+  function vehicleAssignFieldsHtml(selectedVehicleId, mileage, dateVal, currentDriverId){
+    var options = '<option value="">Sin auto asignado</option>' + state.vehicles.map(function(v){
+      var taken = driverForVehicle(v.id);
+      var label = vehicleLabel(v) + (taken && taken.id !== currentDriverId ? ' (asignado a '+taken.name+')' : '');
+      return '<option value="'+v.id+'" '+(selectedVehicleId===v.id?'selected':'')+'>'+escapeHtml(label)+'</option>';
+    }).join('');
+    return (
+      '<div class="field"><label>Auto asignado (opcional)</label><select id="f-vehicle-select">'+options+'</select></div>' +
+      '<div id="f-vehicle-assign-details" style="display:'+(selectedVehicleId?'block':'none')+';">' +
+        '<div class="field-row">' +
+          '<div class="field"><label>Millas al entregar el auto</label><input type="number" step="0.1" min="0" inputmode="decimal" id="f-vehicle-mileage" value="'+(mileage===null||mileage===undefined?'':mileage)+'"></div>' +
+          '<div class="field"><label>Fecha de inicio</label><input type="date" id="f-vehicle-date" value="'+(dateVal||'')+'"><span class="date-hint" id="f-vehicle-date-hint"></span></div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+  function wireVehicleAssignFields(){
+    var sel = document.getElementById('f-vehicle-select');
+    var details = document.getElementById('f-vehicle-assign-details');
+    if(!sel || !details) return;
+    sel.addEventListener('change', function(){ details.style.display = sel.value ? 'block' : 'none'; });
+    wireDateHint('f-vehicle-date', 'f-vehicle-date-hint');
+  }
+
   function openAddDriverModal(){
     openModal(
       '<h3>Nuevo conductor</h3>' +
@@ -886,13 +1169,14 @@
         '<option value="company">Usa un carro de la empresa</option>' +
       '</select></div>' +
       '<div class="field"><label>Teléfono (opcional)</label><input type="text" id="f-phone" inputmode="tel"></div>' +
-      '<div class="field" id="f-vehicle-wrap"><label>Vehículo asignado (opcional)</label><input type="text" id="f-vehicle" placeholder="Ej. Nissan NP300, placa ABC-123"></div>' +
+      vehicleAssignFieldsHtml('', null, '', '') +
       '<div class="field"><label>Día de descanso fijo por semana (opcional)</label><select id="f-restday">' +
         '<option value="">Sin día fijo</option>' +
         WEEKDAYS.map(function(w,i){ return '<option value="'+i+'">'+w+'</option>'; }).join('') +
       '</select></div>' +
       '<div class="modal-actions"><button class="btn primary" data-action="save-driver">Guardar</button><button class="btn" data-action="close-modal">Cancelar</button></div>'
     );
+    wireVehicleAssignFields();
   }
 
   function openDriverDetail(id){
@@ -924,7 +1208,7 @@
         '<option value="company" '+(d.type==='company'?'selected':'')+'>Usa un carro de la empresa</option>' +
       '</select></div>' +
       '<div class="field"><label>Teléfono (opcional)</label><input type="text" id="f-phone" inputmode="tel" value="'+escapeHtml(d.phone||'')+'"></div>' +
-      '<div class="field"><label>Vehículo asignado (opcional)</label><input type="text" id="f-vehicle" value="'+escapeHtml(d.vehicle||'')+'"></div>' +
+      vehicleAssignFieldsHtml(d.vehicleId||'', d.vehicleAssignedMileage, d.vehicleAssignedDate||'', d.id) +
       '<div class="field"><label>Día de descanso fijo por semana</label><select id="f-restday">' +
         '<option value="">Sin día fijo</option>' +
         WEEKDAYS.map(function(w,i){ return '<option value="'+i+'" '+(String(d.weeklyRestDay)===String(i)?'selected':'')+'>'+w+'</option>'; }).join('') +
@@ -942,6 +1226,107 @@
       '</div>'
     );
     wireDateHint('f-extra-rest', 'extraRestHint');
+    wireVehicleAssignFields();
+  }
+
+  var currentVehiclePhoto = null;
+
+  function vehiclePhotoFieldHtml(){
+    return '<div class="field"><label>Foto del auto (opcional)</label>' +
+      '<div class="photo-upload-row">' +
+        '<div class="veh-thumb" id="f-photo-preview">🚚</div>' +
+        '<div class="upload-btns">' +
+          '<input type="file" id="f-photo-input" accept="image/*" capture="environment" style="display:none;">' +
+          '<button type="button" class="btn small" id="f-photo-pick-btn">Elegir / tomar foto</button>' +
+          '<button type="button" class="btn small ghost" id="f-photo-remove-btn" style="display:none;">Quitar foto</button>' +
+        '</div>' +
+      '</div>' +
+      '<span class="date-hint" id="f-photo-status"></span>' +
+    '</div>';
+  }
+
+  function wireVehiclePhotoField(initialPhoto){
+    currentVehiclePhoto = initialPhoto || null;
+    var preview = document.getElementById('f-photo-preview');
+    var input = document.getElementById('f-photo-input');
+    var pickBtn = document.getElementById('f-photo-pick-btn');
+    var removeBtn = document.getElementById('f-photo-remove-btn');
+    var status = document.getElementById('f-photo-status');
+    if(!preview || !input) return;
+    function renderPreview(){
+      preview.innerHTML = currentVehiclePhoto ? '<img src="'+currentVehiclePhoto+'" alt="">' : '🚚';
+      removeBtn.style.display = currentVehiclePhoto ? 'inline-flex' : 'none';
+    }
+    renderPreview();
+    pickBtn.addEventListener('click', function(){ input.click(); });
+    removeBtn.addEventListener('click', function(){ currentVehiclePhoto = null; renderPreview(); status.textContent = ''; });
+    input.addEventListener('change', function(){
+      var file = input.files && input.files[0];
+      if(!file) return;
+      status.textContent = 'Procesando imagen…';
+      readAndCompressImage(file).then(function(dataUrl){
+        currentVehiclePhoto = dataUrl;
+        renderPreview();
+        status.textContent = '';
+      }).catch(function(e){
+        status.textContent = e.message;
+      });
+    });
+  }
+
+  function openAddVehicleModal(){
+    openModal(
+      '<h3>Nuevo auto</h3>' +
+      vehiclePhotoFieldHtml() +
+      '<div class="field-row">' +
+        '<div class="field"><label>Marca</label><input type="text" id="f-brand" placeholder="Ej. Nissan"></div>' +
+        '<div class="field"><label>Modelo</label><input type="text" id="f-model" placeholder="Ej. NP300"></div>' +
+      '</div>' +
+      '<div class="field-row">' +
+        '<div class="field"><label>Año</label><input type="number" id="f-year" inputmode="numeric" placeholder="Ej. 2021"></div>' +
+        '<div class="field"><label>Número de placa</label><input type="text" id="f-plate" placeholder="Ej. ABC-123"></div>' +
+      '</div>' +
+      '<div class="field"><label>Millas actuales</label><input type="number" step="0.1" min="0" inputmode="decimal" id="f-mileage" placeholder="0"></div>' +
+      '<div class="modal-actions"><button class="btn primary" data-action="save-vehicle">Guardar</button><button class="btn" data-action="close-modal">Cancelar</button></div>'
+    );
+    wireVehiclePhotoField(null);
+  }
+
+  function openVehicleDetail(id){
+    var v = vehicleById(id);
+    if(!v) return;
+    var driver = driverForVehicle(v.id);
+    openModal(
+      '<h3>'+escapeHtml(v.brand+' '+v.model)+'</h3>' +
+      vehiclePhotoFieldHtml() +
+      '<div class="field-row">' +
+        '<div class="field"><label>Marca</label><input type="text" id="f-brand" value="'+escapeHtml(v.brand)+'"></div>' +
+        '<div class="field"><label>Modelo</label><input type="text" id="f-model" value="'+escapeHtml(v.model)+'"></div>' +
+      '</div>' +
+      '<div class="field-row">' +
+        '<div class="field"><label>Año</label><input type="number" id="f-year" inputmode="numeric" value="'+(v.year||'')+'"></div>' +
+        '<div class="field"><label>Número de placa</label><input type="text" id="f-plate" value="'+escapeHtml(v.plate)+'"></div>' +
+      '</div>' +
+      '<div class="field"><label>Millas actuales</label><input type="number" step="0.1" min="0" inputmode="decimal" id="f-mileage" value="'+v.currentMileage+'"></div>' +
+      (driver ? '<p style="font-size:12.5px; color:var(--text-secondary); line-height:1.5;">Actualmente asignado a <strong>'+escapeHtml(driver.name)+'</strong> desde el '+(driver.vehicleAssignedDate?fmtDate(driver.vehicleAssignedDate):'—')+'.</p>' : '<p style="font-size:12.5px; color:var(--text-muted);">Este auto no está asignado a ningún conductor.</p>') +
+      '<div class="modal-actions">' +
+        '<button class="btn primary" data-action="save-vehicle-edit" data-id="'+v.id+'">Guardar cambios</button>' +
+        '<button class="btn" data-action="close-modal">Cerrar</button>' +
+        '<button class="btn danger" data-action="delete-vehicle" data-id="'+v.id+'">Eliminar auto</button>' +
+      '</div>'
+    );
+    wireVehiclePhotoField(v.photo);
+  }
+
+  function vehiclePhotoBoxHtml(driverId){
+    var d = driverById(driverId);
+    if(!d || !d.vehicleId) return '';
+    var v = vehicleById(d.vehicleId);
+    if(!v) return '';
+    return '<div class="vehicle-photo-box">' +
+      (v.photo ? '<img src="'+v.photo+'" alt="Foto de '+escapeHtml(vehicleLabel(v))+'">' : '') +
+      '<div class="vp-caption">'+(v.photo?'':'🚚 ')+escapeHtml(vehicleLabel(v))+'</div>' +
+    '</div>';
   }
 
   function openAddChargeModal(presetDriverId){
@@ -955,6 +1340,7 @@
     openModal(
       '<h3>'+(presetDriver ? 'Cargar gasolina — '+escapeHtml(presetDriver.name) : 'Registrar carga de gasolina')+'</h3>' +
       '<div class="field"><label>Conductor</label><select id="f-driver">' + companyDrivers.map(function(d){ return '<option value="'+d.id+'" '+(presetDriverId===d.id?'selected':'')+'>'+escapeHtml(d.name)+'</option>'; }).join('') + '</select></div>' +
+      '<div id="vehiclePhotoBox">'+vehiclePhotoBoxHtml(initialDriverId)+'</div>' +
       '<div id="lastChargeBox">'+lastChargeBoxHtml(initialDriverId)+'</div>' +
       '<div class="field"><label>Monto total</label><input type="number" step="0.01" min="0" inputmode="decimal" id="f-amount" placeholder="0.00"></div>' +
       '<div class="field-row">' +
@@ -965,6 +1351,7 @@
       '<div class="modal-actions"><button class="btn primary" data-action="save-charge">Guardar</button><button class="btn" data-action="close-modal">Cancelar</button></div>'
     );
     document.getElementById('f-driver').addEventListener('change', function(){
+      document.getElementById('vehiclePhotoBox').innerHTML = vehiclePhotoBoxHtml(this.value);
       document.getElementById('lastChargeBox').innerHTML = lastChargeBoxHtml(this.value);
     });
     wireDateHint('f-date', 'f-date-hint');
@@ -990,16 +1377,30 @@
   }
 
   // ---------- Actions (all call the API, then reload from the shared database) ----------
+  function readVehicleAssignFields(){
+    var vehicleId = document.getElementById('f-vehicle-select').value || null;
+    var mileageEl = document.getElementById('f-vehicle-mileage');
+    var dateEl = document.getElementById('f-vehicle-date');
+    return {
+      vehicleId: vehicleId,
+      vehicleAssignedMileage: vehicleId && mileageEl.value !== '' ? parseFloat(mileageEl.value) : null,
+      vehicleAssignedDate: vehicleId && dateEl.value ? dateEl.value : null
+    };
+  }
+
   function saveNewDriver(){
     var name = document.getElementById('f-name').value.trim();
     if(!name){ showModalError('El nombre es obligatorio.'); return; }
     var restVal = document.getElementById('f-restday').value;
+    var va = readVehicleAssignFields();
     apiSend('POST', '/api/drivers', {
       name: name,
       type: document.getElementById('f-type').value,
       phone: document.getElementById('f-phone').value.trim(),
-      vehicle: document.getElementById('f-vehicle').value.trim(),
-      weeklyRestDay: restVal === '' ? null : Number(restVal)
+      weeklyRestDay: restVal === '' ? null : Number(restVal),
+      vehicleId: va.vehicleId,
+      vehicleAssignedMileage: va.vehicleAssignedMileage,
+      vehicleAssignedDate: va.vehicleAssignedDate
     }).then(function(){
       closeModal();
       return loadAll();
@@ -1008,16 +1409,57 @@
 
   function saveDriverEdit(id){
     var restVal = document.getElementById('f-restday').value;
+    var va = readVehicleAssignFields();
     apiSend('PUT', '/api/drivers/' + id, {
       name: document.getElementById('f-name').value.trim(),
       type: document.getElementById('f-type').value,
       phone: document.getElementById('f-phone').value.trim(),
-      vehicle: document.getElementById('f-vehicle').value.trim(),
-      weeklyRestDay: restVal === '' ? null : Number(restVal)
+      weeklyRestDay: restVal === '' ? null : Number(restVal),
+      vehicleId: va.vehicleId,
+      vehicleAssignedMileage: va.vehicleAssignedMileage,
+      vehicleAssignedDate: va.vehicleAssignedDate
     }).then(function(){
       closeModal();
       return loadAll();
     }).catch(function(e){ showModalError(e.message); });
+  }
+
+  function saveNewVehicle(){
+    var brand = document.getElementById('f-brand').value.trim();
+    var model = document.getElementById('f-model').value.trim();
+    var plate = document.getElementById('f-plate').value.trim();
+    if(!brand || !model || !plate){ showModalError('Marca, modelo y número de placa son obligatorios.'); return; }
+    apiSend('POST', '/api/vehicles', {
+      brand: brand, model: model, plate: plate,
+      year: document.getElementById('f-year').value ? Number(document.getElementById('f-year').value) : null,
+      currentMileage: document.getElementById('f-mileage').value ? parseFloat(document.getElementById('f-mileage').value) : 0,
+      photo: currentVehiclePhoto
+    }).then(function(){
+      closeModal();
+      return loadAll();
+    }).catch(function(e){ showModalError(e.message); });
+  }
+
+  function saveVehicleEdit(id){
+    apiSend('PUT', '/api/vehicles/' + id, {
+      brand: document.getElementById('f-brand').value.trim(),
+      model: document.getElementById('f-model').value.trim(),
+      plate: document.getElementById('f-plate').value.trim(),
+      year: document.getElementById('f-year').value ? Number(document.getElementById('f-year').value) : null,
+      currentMileage: document.getElementById('f-mileage').value ? parseFloat(document.getElementById('f-mileage').value) : 0,
+      photo: currentVehiclePhoto
+    }).then(function(){
+      closeModal();
+      return loadAll();
+    }).catch(function(e){ showModalError(e.message); });
+  }
+
+  function deleteVehicle(id){
+    if(!confirm('¿Eliminar este auto? Si está asignado a un conductor, quedará sin auto asignado.')) return;
+    apiSend('DELETE', '/api/vehicles/' + id).then(function(){
+      closeModal();
+      return loadAll();
+    }).catch(function(e){ alert(e.message); });
   }
 
   function deleteDriver(id){
@@ -1096,6 +1538,66 @@
     URL.revokeObjectURL(url);
   }
 
+  // ---------- Exportar a Excel (para la planilla de ganancias) ----------
+  // La librería para generar el .xlsx se carga solo la primera vez que se
+  // usa el botón, así el resto de la app no paga ese peso de descarga.
+  var xlsxLoadPromise = null;
+  function ensureXlsxLib(){
+    if(window.XLSX) return Promise.resolve();
+    if(xlsxLoadPromise) return xlsxLoadPromise;
+    xlsxLoadPromise = new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = function(){ resolve(); };
+      s.onerror = function(){ xlsxLoadPromise = null; reject(new Error('No se pudo cargar la librería de Excel. Verifica tu conexión a internet e inténtalo de nuevo.')); };
+      document.head.appendChild(s);
+    });
+    return xlsxLoadPromise;
+  }
+
+  function exportChargesToExcel(){
+    var filterId = document.getElementById('reportExportDriver').value;
+    var rows = state.charges.filter(function(c){
+      return c.date >= reportRange.start && c.date <= reportRange.end && (!filterId || c.driverId === filterId);
+    }).slice().sort(function(a,b){ return (a.date+a.time).localeCompare(b.date+b.time); });
+
+    if(rows.length === 0){
+      alert('No hay cargas de gasolina en el rango de fechas y conductor seleccionados.');
+      return;
+    }
+
+    var btn = document.getElementById('exportExcelBtn');
+    var originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Generando…';
+
+    ensureXlsxLib().then(function(){
+      var data = rows.map(function(c){
+        var d = driverById(c.driverId);
+        return {
+          'Conductor': d ? d.name : '(conductor eliminado)',
+          'Fecha': fmtDate(c.date),
+          'Hora': c.time || '',
+          'Monto': Number(c.amount),
+          'Nota': c.note || ''
+        };
+      });
+      var ws = XLSX.utils.json_to_sheet(data);
+      ws['!cols'] = [{wch:24},{wch:12},{wch:8},{wch:12},{wch:32}];
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Cargas de gasolina');
+      var driverForFile = filterId ? driverById(filterId) : null;
+      var driverLabel = driverForFile ? driverForFile.name.replace(/[^a-zA-Z0-9]+/g, '_') : 'todos';
+      var filename = 'cargas-gasolina_' + reportRange.start + '_a_' + reportRange.end + '_' + driverLabel + '.xlsx';
+      XLSX.writeFile(wb, filename);
+    }).catch(function(e){
+      alert(e.message);
+    }).then(function(){
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    });
+  }
+
   // ---------- Event wiring ----------
   document.querySelectorAll('[data-tab]').forEach(function(btn){
     btn.addEventListener('click', function(){ state.activeTab = btn.dataset.tab; render(); window.scrollTo(0,0); });
@@ -1103,8 +1605,10 @@
 
   document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
   document.getElementById('addDriverBtn').addEventListener('click', openAddDriverModal);
+  document.getElementById('addVehicleBtn').addEventListener('click', openAddVehicleModal);
   document.getElementById('addChargeBtn').addEventListener('click', function(){ openAddChargeModal(); });
   document.getElementById('chargeFilterDriver').addEventListener('change', renderCharges);
+  document.getElementById('exportExcelBtn').addEventListener('click', exportChargesToExcel);
 
   document.getElementById('overlay').addEventListener('click', function(e){ if(e.target.id === 'overlay') closeModal(); });
 
@@ -1128,6 +1632,21 @@
     renderReports();
   });
 
+  document.getElementById('reconcilePrevWeek').addEventListener('click', function(){
+    reconcileWeek = shiftWorkWeek(reconcileWeek, -1);
+    renderReconcile();
+  });
+  document.getElementById('reconcileNextWeek').addEventListener('click', function(){
+    reconcileWeek = shiftWorkWeek(reconcileWeek, 1);
+    renderReconcile();
+  });
+  document.getElementById('reconcileThisWeek').addEventListener('click', function(){
+    reconcileWeek = workWeekRange(todayISO());
+    renderReconcile();
+  });
+  document.getElementById('reconcileFilterDriver').addEventListener('change', renderReconcile);
+  document.getElementById('reconcileMarkAllBtn').addEventListener('click', markAllPendingReconciled);
+
   // Delegated clicks (driver list, charge cards, modal buttons)
   document.body.addEventListener('click', function(e){
     var el = e.target.closest('[data-action]');
@@ -1146,10 +1665,20 @@
     else if(action === 'edit-charge') openEditChargeModal(id);
     else if(action === 'save-charge-edit') saveChargeEdit(id);
     else if(action === 'delete-charge') deleteCharge(id);
+    else if(action === 'open-vehicle') openVehicleDetail(id);
+    else if(action === 'save-vehicle') saveNewVehicle();
+    else if(action === 'save-vehicle-edit') saveVehicleEdit(id);
+    else if(action === 'delete-vehicle') deleteVehicle(id);
+    else if(action === 'reconcile-charge') reconcileCharge(id);
+    else if(action === 'unreconcile-charge') unreconcileCharge(id);
   });
   document.getElementById('driverList').addEventListener('click', function(e){
     var item = e.target.closest('.driver-item');
     if(item && !e.target.closest('[data-action]')) openDriverDetail(item.dataset.driverId);
+  });
+  document.getElementById('vehicleList').addEventListener('click', function(e){
+    var item = e.target.closest('.driver-item');
+    if(item && !e.target.closest('[data-action]')) openVehicleDetail(item.dataset.vehicleId);
   });
 
   // ---------- Init ----------
