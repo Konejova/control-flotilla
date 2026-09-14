@@ -312,6 +312,36 @@ app.put("/api/charges/:id/reconcile", (req, res) => {
   res.json(charge);
 });
 
+// Conciliación masiva: recibe una lista de {id, reconciled} (por ejemplo,
+// leída de un Excel exportado/editado/reimportado) y actualiza cada carga.
+app.post("/api/charges/reconcile-bulk", (req, res) => {
+  const b = req.body || {};
+  const items = Array.isArray(b.items) ? b.items : [];
+  if (!items.length) return res.status(400).json({ error: "No se enviaron cargas para conciliar." });
+  const actor = b.actor || "";
+  const results = [];
+  items.forEach((item) => {
+    if (!item || typeof item.id !== "string" || !item.id) {
+      results.push({ id: item && item.id, ok: false, error: "ID inválido" });
+      return;
+    }
+    const reconciled = !!item.reconciled;
+    const charge = data.charges.find((c) => c.id === item.id);
+    if (!charge) {
+      results.push({ id: item.id, ok: false, error: "Carga no encontrada" });
+      return;
+    }
+    charge.reconciled = reconciled;
+    charge.reconciledAt = reconciled ? new Date().toISOString() : null;
+    charge.reconciledBy = reconciled ? actor : "";
+    results.push({ id: item.id, ok: true });
+  });
+  save();
+  const okIds = results.filter((r) => r.ok).map((r) => r.id);
+  const charges = data.charges.filter((c) => okIds.includes(c.id));
+  res.json({ updated: results, charges });
+});
+
 // ---------- Historial ----------
 app.get("/api/history", (req, res) => {
   const list = data.history

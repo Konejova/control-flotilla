@@ -388,6 +388,40 @@ app.put("/api/charges/:id/reconcile", async (req, res) => {
   res.json(rowToCharge(rows[0]));
 });
 
+// Conciliación masiva: recibe una lista de {id, reconciled} (por ejemplo,
+// leída de un Excel exportado/editado/reimportado) y actualiza cada carga.
+app.post("/api/charges/reconcile-bulk", async (req, res) => {
+  const b = req.body || {};
+  const items = Array.isArray(b.items) ? b.items : [];
+  if (!items.length) return res.status(400).json({ error: "No se enviaron cargas para conciliar." });
+  const actor = b.actor || "";
+  const results = [];
+  for (const item of items) {
+    if (!item || typeof item.id !== "string" || !item.id) {
+      results.push({ id: item && item.id, ok: false, error: "ID inválido" });
+      continue;
+    }
+    const reconciled = !!item.reconciled;
+    const { rows: existing } = await pool.query("SELECT id FROM charges WHERE id=$1", [item.id]);
+    if (!existing.length) {
+      results.push({ id: item.id, ok: false, error: "Carga no encontrada" });
+      continue;
+    }
+    await pool.query(
+      `UPDATE charges SET reconciled=$1, reconciled_at=$2, reconciled_by=$3 WHERE id=$4`,
+      [reconciled, reconciled ? new Date() : null, reconciled ? actor : "", item.id]
+    );
+    results.push({ id: item.id, ok: true });
+  }
+  const okIds = results.filter((r) => r.ok).map((r) => r.id);
+  let charges = [];
+  if (okIds.length) {
+    const { rows } = await pool.query("SELECT * FROM charges WHERE id = ANY($1::text[])", [okIds]);
+    charges = rows.map(rowToCharge);
+  }
+  res.json({ updated: results, charges });
+});
+
 // ---------- History ----------
 app.get("/api/history", async (req, res) => {
   const { rows } = await pool.query(`

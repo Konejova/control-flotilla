@@ -450,6 +450,16 @@
         <button class="btn small" id="reconcileMarkAllBtn">Marcar pendientes como conciliados</button>
       </div>
 
+      <div class="card" style="margin-bottom:14px;">
+        <h2 class="section-title" style="margin-top:0;">Conciliación masiva (Excel)</h2>
+        <div class="toolbar" style="margin-bottom:0;">
+          <button class="btn small" id="reconcileExportBtn">⬇ Exportar semana a Excel</button>
+          <button class="btn small" id="reconcileImportBtn">⬆ Importar Excel</button>
+          <input type="file" id="reconcileImportFile" accept=".xlsx,.xls,.csv" style="display:none;">
+        </div>
+        <p style="font-size:11.5px; color:var(--text-muted); line-height:1.5; margin: 10px 0 0 0;">Exporta las cargas de la semana (y conductor filtrado arriba) a un archivo .xlsx con una columna "Conciliado". Márcala como SI o NO fuera de la app y vuelve a importar el mismo archivo para actualizar muchas cargas de una vez. No cambies la columna "ID" — es lo que usa la app para saber cuál carga es cuál.</p>
+      </div>
+
       <div class="entry-list" id="reconcileList"></div>
       <div class="empty" id="reconcileEmpty" style="display:none;">No hay cargas de gasolina registradas en esta semana.</div>
     </section>
@@ -1097,6 +1107,112 @@
       .catch(function(e){ alert(e.message); return loadAll(); });
   }
 
+  // ---------- Conciliación masiva vía Excel (exportar / importar) ----------
+  function exportReconcileToExcel(){
+    var rows = reconcileWeekCharges();
+    if(rows.length === 0){
+      alert('No hay cargas de gasolina en esta semana' + (document.getElementById('reconcileFilterDriver').value ? ' para el conductor seleccionado.' : '.'));
+      return;
+    }
+    var btn = document.getElementById('reconcileExportBtn');
+    var originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Generando…';
+
+    ensureXlsxLib().then(function(){
+      var data = rows.slice().sort(function(a,b){ return (a.date+a.time).localeCompare(b.date+b.time); }).map(function(c){
+        var d = driverById(c.driverId);
+        return {
+          'ID': c.id,
+          'Conductor': d ? d.name : '(conductor eliminado)',
+          'Fecha': c.date,
+          'Hora': c.time || '',
+          'Monto': Number(c.amount),
+          'Nota': c.note || '',
+          'Conciliado': c.reconciled ? 'SI' : 'NO'
+        };
+      });
+      var ws = XLSX.utils.json_to_sheet(data);
+      ws['!cols'] = [{wch:14},{wch:24},{wch:12},{wch:8},{wch:12},{wch:32},{wch:11}];
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Conciliación');
+      var filterId = document.getElementById('reconcileFilterDriver').value;
+      var driverForFile = filterId ? driverById(filterId) : null;
+      var driverLabel = driverForFile ? driverForFile.name.replace(/[^a-zA-Z0-9]+/g, '_') : 'todos';
+      var filename = 'conciliacion_' + reconcileWeek.start + '_a_' + reconcileWeek.end + '_' + driverLabel + '.xlsx';
+      XLSX.writeFile(wb, filename);
+    }).catch(function(e){
+      alert(e.message);
+    }).then(function(){
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    });
+  }
+
+  function normalizeReconcileValue(v){
+    var s = String(v == null ? '' : v).trim().toLowerCase();
+    return ['si','sí','s','yes','y','true','1','x','✓','ok'].indexOf(s) !== -1;
+  }
+
+  function importReconcileFromExcel(file){
+    if(!file) return;
+    var btn = document.getElementById('reconcileImportBtn');
+    var originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Leyendo…';
+
+    ensureXlsxLib().then(function(){
+      return new Promise(function(resolve, reject){
+        var reader = new FileReader();
+        reader.onload = function(e){ resolve(e.target.result); };
+        reader.onerror = function(){ reject(new Error('No se pudo leer el archivo.')); };
+        reader.readAsArrayBuffer(file);
+      });
+    }).then(function(buffer){
+      var wb = XLSX.read(buffer, {type:'array'});
+      var sheet = wb.Sheets[wb.SheetNames[0]];
+      var jsonRows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+      if(jsonRows.length === 0){
+        throw new Error('El archivo no tiene filas para importar.');
+      }
+      var chargeIds = {};
+      state.charges.forEach(function(c){ chargeIds[c.id] = true; });
+
+      var items = [];
+      var noId = 0, notFoundLocal = 0;
+      jsonRows.forEach(function(row){
+        var id = String(row['ID'] || row['Id'] || row['id'] || '').trim();
+        if(!id){ noId++; return; }
+        if(!chargeIds[id]){ notFoundLocal++; return; }
+        var reconciled = normalizeReconcileValue(row['Conciliado'] !== undefined ? row['Conciliado'] : row['conciliado']);
+        items.push({id: id, reconciled: reconciled});
+      });
+
+      if(items.length === 0){
+        throw new Error('No se encontró ninguna fila con un ID de carga válido. No modifiques la columna "ID" del archivo exportado.');
+      }
+
+      btn.textContent = 'Actualizando…';
+      return apiSend('POST', '/api/charges/reconcile-bulk', {items: items, actor: getActor()}).then(function(result){
+        return {result: result, noId: noId, notFoundLocal: notFoundLocal};
+      });
+    }).then(function(info){
+      var updatedList = (info.result && info.result.updated) || [];
+      var updated = updatedList.filter(function(u){ return u.ok; }).length;
+      var failed = updatedList.filter(function(u){ return !u.ok; }).length + info.notFoundLocal;
+      var msg = 'Importación completa: ' + updated + ' carga' + (updated===1?'':'s') + ' actualizada' + (updated===1?'':'s') + '.';
+      if(failed) msg += '\n' + failed + ' fila(s) no coincidían con ninguna carga existente (se ignoraron).';
+      if(info.noId) msg += '\n' + info.noId + ' fila(s) sin columna "ID" válida (se ignoraron).';
+      alert(msg);
+      return loadAll();
+    }).catch(function(e){
+      alert(e.message);
+    }).then(function(){
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    });
+  }
+
   // ---------- Modals ----------
   function openModal(html){
     document.getElementById('modalBody').innerHTML = '<div class="sheet-handle"></div>' + html;
@@ -1646,6 +1762,15 @@
   });
   document.getElementById('reconcileFilterDriver').addEventListener('change', renderReconcile);
   document.getElementById('reconcileMarkAllBtn').addEventListener('click', markAllPendingReconciled);
+  document.getElementById('reconcileExportBtn').addEventListener('click', exportReconcileToExcel);
+  document.getElementById('reconcileImportBtn').addEventListener('click', function(){
+    document.getElementById('reconcileImportFile').click();
+  });
+  document.getElementById('reconcileImportFile').addEventListener('change', function(){
+    var file = this.files && this.files[0];
+    this.value = '';
+    if(file) importReconcileFromExcel(file);
+  });
 
   // Delegated clicks (driver list, charge cards, modal buttons)
   document.body.addEventListener('click', function(e){
